@@ -131,20 +131,30 @@ From the same wiki, plus what we already measured on this device:
 `rom/gsi-inputs.sh` accepts any donor now:
 
 * auto-detect falls back from `*-MysticGSI.zip*` to any zip that really contains a
-  `system.img*` member (name guesses are never trusted);
-* `system.img.gz` / `.xz` / `.lz4` members are decompressed once automatically;
+  `system.img*` member (name guesses are never trusted), and then to a bare
+  `*.img.xz` / `*.img.gz` / `*.img` donor — the layout Infinity X, BestGSI,
+  Aizner and AndyYan actually publish. `boot*`, `vbmeta*`, `recovery*`, `super*`,
+  `dtbo*`, `userdata*` files in the same folder are never picked;
+* `system.img.gz` / `.xz` / `.lz4` members, and single-file `.img.xz` / `.img.gz`
+  donors, are decompressed/decoded once automatically;
 * level/TAG can be stated explicitly when the file name carries no codename.
 
 Colab cell (one paste, then edit these three lines at the top):
 
 ```python
-ROM_NAME = "PixelGSI"       # appears in the AP name
+ROM_NAME = "InfinityX"      # appears in the AP name
 # and in the cell's os.environ before the build:
 import os
-os.environ["GSI_ZIP"]  = "/content/drive/MyDrive/PixelOSA155F/gsi_gms_arm64-exp-DP11.260918.006-16451184-8f0c1d2e.zip"
-os.environ["GSI_TAG"]  = "google-A17"   # no codename in the file name -> say it
+os.environ["GSI_ZIP"]  = "/content/drive/MyDrive/PixelOSA155F/Infinity-X-4.2-GSI_treble_arm64-ab-GAPPS-Official-20261120.img.xz"
+os.environ["GSI_TAG"]  = "infinityx-A17"   # no codename in the file name -> say it
 os.environ["GSI_LEVEL"]= "17"
 ```
+
+A `.img.xz` / `.img.gz` / raw `.img` donor needs no repacking: the file *is* the
+system image. Both shapes were validated on fixtures (zip-with-gz-member and
+single-file `.img.xz`), each ending in `VERDICT: clean`; a raw `.img` run was
+also checked with `boot.img`, `vbmeta.img` and `super.img` decoys in the same
+folder — the decoys were ignored.
 
 Resulting name: `AP_SM-A155F_PixelGSI-google-A17_bakasu_<PDA>.tar` — Gate G0 still
 pins the donor by size+MD5, so a truncated Drive download stops at stage 2.

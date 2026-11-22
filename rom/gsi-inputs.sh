@@ -62,16 +62,28 @@ if [ -z "$GSI_ZIP" ]; then
     done < <(find "$INPUTS_DIR" -maxdepth 1 -type f -name '*.zip' \
                ! -name '*_fac.zip*' ! -name 'SAMFW*' ! -name '*src*' | sort)
   fi
+  if [ "${#CANDS[@]}" -eq 0 ]; then
+    # Several builders (Doze-off/Infinity X, BestGSI, Aizner, AndyYan) publish one
+    # .img.xz instead of a zip. Accept that too, but never a boot/vbmeta/recovery/
+    # super image that merely happens to sit in the same folder.
+    while IFS= read -r f; do
+      case "$(basename "$f")" in
+        boot*|vbmeta*|recovery*|super*|dtbo*|userdata*) continue ;;
+      esac
+      CANDS+=("$f")
+    done < <(find "$INPUTS_DIR" -maxdepth 1 -type f \
+               \( -name '*.img.xz' -o -name '*.img.gz' -o -name '*.img' \) | sort)
+  fi
   [ "${#CANDS[@]}" -gt 0 ] || {
-    echo "FATAL: no GSI zip in $INPUTS_DIR"
-    echo "  looked for: *-MysticGSI.zip*, then any .zip containing system.img*"
+    echo "FATAL: no GSI in $INPUTS_DIR"
+    echo "  looked for: *-MysticGSI.zip*, any .zip containing system.img*, then *.img.xz/.img.gz/.img"
     ls -1 "$INPUTS_DIR" | sed 's/^/    /' || true
     exit 1
   }
   GSI_ZIP="${CANDS[0]}"
   [ "${#CANDS[@]}" -gt 1 ] && echo "note: multiple GSI zips found, using $(basename "$GSI_ZIP") (set GSI_ZIP to override)"
 fi
-[ -f "$GSI_ZIP" ] || { echo "FATAL: GSI zip not found: $GSI_ZIP"; exit 1; }
+[ -f "$GSI_ZIP" ] || { echo "FATAL: GSI file not found: $GSI_ZIP"; exit 1; }
 say "GSI: $(basename "$GSI_ZIP")"
 LOCK="${INPUTS_LOCK:-inputs/inputs.lock.json}"
 # Gate G0 (hard): no pin, no build. tools/pin_gate.py matches the longest pinned
@@ -82,10 +94,26 @@ python3 tools/pin_gate.py --lock "$LOCK" --file "$GSI_ZIP" --role donor-gsi-prim
 
 say "extracting system.img"
 rm -rf work/gsi/zip
-if ! python3 tools/gsi_inspect.py "$GSI_ZIP" --extract work/gsi/zip --only system.img >/dev/null 2>&1; then
+mkdir -p work/gsi/zip
+case "$GSI_ZIP" in
+  *.img.xz|*.img.gz|*.img.lz4|*.img)
+    # Single-file donor (Infinity X, BestGSI, Aizner, AndyYan ...): the whole file
+    # is the system image, optionally compressed. No zip, no members.
+    echo "single-image donor: $(basename "$GSI_ZIP")"
+    case "$GSI_ZIP" in
+      *.img.xz)  command -v xz >/dev/null || { echo "FATAL: xz not found (apt install xz-utils)"; exit 1; }
+                 xz -dc "$GSI_ZIP" > work/gsi/zip/system.img ;;
+      *.img.gz)  gzip -dc "$GSI_ZIP" > work/gsi/zip/system.img ;;
+      *.img.lz4) lz4 -d -f "$GSI_ZIP" work/gsi/zip/system.img >/dev/null 2>&1 \
+                   || { echo "FATAL: lz4 failed on $(basename "$GSI_ZIP") (run: bash rom/tools.sh)"; exit 1; } ;;
+      *)         cp "$GSI_ZIP" work/gsi/zip/system.img ;;
+    esac
+    ;;
+esac
+if [ ! -f work/gsi/zip/system.img ] && ! python3 tools/gsi_inspect.py "$GSI_ZIP" --extract work/gsi/zip --only system.img >/dev/null 2>&1; then
   echo "note: gsi_inspect refused (see below); falling back to plain unzip"
   python3 tools/gsi_inspect.py "$GSI_ZIP" || true
-  unzip -o -j "$GSI_ZIP" system.img -d work/gsi/zip >/dev/null
+  unzip -o -j "$GSI_ZIP" system.img -d work/gsi/zip >/dev/null 2>&1 || true
 fi
 # Some donors ship system.img.xz / .gz / .lz4 instead of a raw member (Google's
 # own GSI zips are raw, several TrebleDroid builders are not). Decompress once,
@@ -106,7 +134,11 @@ if [ ! -f work/gsi/zip/system.img ]; then
     fi
   done
 fi
-[ -f work/gsi/zip/system.img ] || { echo "FATAL: no system.img (raw or .xz/.gz/.lz4) inside $GSI_ZIP"; exit 1; }
+[ -f work/gsi/zip/system.img ] || {
+  echo "FATAL: no system image found in $GSI_ZIP"
+  echo "  accepted: zip member system.img[.xz|.gz|.lz4], or a bare *.img[.xz|.gz|.lz4] donor"
+  exit 1
+}
 
 if python3 -c "import sys; sys.exit(0 if open('work/gsi/zip/system.img','rb').read(4)==b'\x3a\xff\x26\xed' else 1)"; then
   echo "system.img is Android-sparse -> rom/simg2img.py (lpmake needs raw)"

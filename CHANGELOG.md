@@ -4,6 +4,20 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — single-file GSI donors (.img.xz / .img.gz / .img)
+
+* The A17+TrebleDroid builders publish one compressed image, not a zip
+  (Infinity X: `…-arm64-ab-GAPPS-Official-20261120.img.xz`). `rom/gsi-inputs.sh`
+  now detects those by content-independent extension, decompresses once into
+  `work/gsi/zip/system.img`, and keeps G0 (size+MD5 pin) in front of it. Decoy
+  `boot*/vbmeta*/recovery*/super*/dtbo*/userdata*` files in the same folder are
+  never selected.
+* Validated: `.img.xz` fixture → `AP_SM-A155F_InfinityX-infinityx-A17_bakasu_…`
+  138,690,560 B, `VERDICT: clean`; raw `.img` fixture with three decoys → the
+  Lineage-named donor was chosen, `VERDICT: clean`. Tests still 41 OK.
+
+---
+
 ## 2026-11-22 — A17 + TrebleDroid shortlist (verified upstream)
 
 * `docs/GSI-SELECTION.md` §7: six A17 donors checked against their own release
