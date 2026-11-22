@@ -23,3 +23,6 @@ __pycache__/
 # Editor / OS noise
 .DS_Store
 *.swp
+
+# adb baseline dumps (tools/device_state.sh output, per-run)
+device_state-*.txt
