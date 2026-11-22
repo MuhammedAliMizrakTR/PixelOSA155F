@@ -48,9 +48,26 @@ DF
 GSI_ZIP="${GSI_ZIP:-}"
 if [ -z "$GSI_ZIP" ]; then
   # Every Mystic GSI Updates build ends with "-MysticGSI.zip"; that token works
-  # for Pixel-*, Nothing-* and Generic builds alike.
+  # for Pixel-*, Nothing-* and Generic builds alike. Google's own GSIs
+  # (gsi_gms_arm64-exp-*.zip), PixelOS (treble_pixelos-*.zip) and the other
+  # TrebleDroid builders do not follow that name, so the second pass accepts any
+  # zip that really carries a system image member - never a name guess.
   mapfile -t CANDS < <(find "$INPUTS_DIR" -maxdepth 1 -type f -name '*-MysticGSI.zip*' ! -name '*src*' | sort)
-  [ "${#CANDS[@]}" -gt 0 ] || { echo "FATAL: no *-MysticGSI.zip in $INPUTS_DIR"; exit 1; }
+  if [ "${#CANDS[@]}" -eq 0 ]; then
+    while IFS= read -r f; do
+      LIST=$(unzip -Z1 "$f" 2>/dev/null || true)     # capture: `unzip | grep` dies by SIGPIPE
+      case "$LIST" in
+        *system.img*) CANDS+=("$f") ;;
+      esac
+    done < <(find "$INPUTS_DIR" -maxdepth 1 -type f -name '*.zip' \
+               ! -name '*_fac.zip*' ! -name 'SAMFW*' ! -name '*src*' | sort)
+  fi
+  [ "${#CANDS[@]}" -gt 0 ] || {
+    echo "FATAL: no GSI zip in $INPUTS_DIR"
+    echo "  looked for: *-MysticGSI.zip*, then any .zip containing system.img*"
+    ls -1 "$INPUTS_DIR" | sed 's/^/    /' || true
+    exit 1
+  }
   GSI_ZIP="${CANDS[0]}"
   [ "${#CANDS[@]}" -gt 1 ] && echo "note: multiple GSI zips found, using $(basename "$GSI_ZIP") (set GSI_ZIP to override)"
 fi
@@ -70,7 +87,26 @@ if ! python3 tools/gsi_inspect.py "$GSI_ZIP" --extract work/gsi/zip --only syste
   python3 tools/gsi_inspect.py "$GSI_ZIP" || true
   unzip -o -j "$GSI_ZIP" system.img -d work/gsi/zip >/dev/null
 fi
-[ -f work/gsi/zip/system.img ] || { echo "FATAL: no system.img inside $GSI_ZIP"; exit 1; }
+# Some donors ship system.img.xz / .gz / .lz4 instead of a raw member (Google's
+# own GSI zips are raw, several TrebleDroid builders are not). Decompress once,
+# keep the original zip untouched.
+if [ ! -f work/gsi/zip/system.img ]; then
+  for ext in xz gz lz4; do
+    if unzip -o -j "$GSI_ZIP" "system.img.$ext" -d work/gsi/zip >/dev/null 2>&1; then
+      echo "system.img.$ext found -> decompressing"
+      case "$ext" in
+        xz)  command -v xz  >/dev/null || { echo "FATAL: xz not found (apt install xz-utils on the runner)"; exit 1; }
+             xz -dc "work/gsi/zip/system.img.xz" > work/gsi/zip/system.img ;;
+        gz)  gzip -dc "work/gsi/zip/system.img.gz" > work/gsi/zip/system.img ;;
+        lz4) lz4 -d -f "work/gsi/zip/system.img.lz4" work/gsi/zip/system.img >/dev/null 2>&1 \
+               || { echo "FATAL: lz4 failed on system.img.lz4 (run: bash rom/tools.sh)"; exit 1; } ;;
+      esac
+      rm -f "work/gsi/zip/system.img.$ext"
+      break
+    fi
+  done
+fi
+[ -f work/gsi/zip/system.img ] || { echo "FATAL: no system.img (raw or .xz/.gz/.lz4) inside $GSI_ZIP"; exit 1; }
 
 if python3 -c "import sys; sys.exit(0 if open('work/gsi/zip/system.img','rb').read(4)==b'\x3a\xff\x26\xed' else 1)"; then
   echo "system.img is Android-sparse -> rom/simg2img.py (lpmake needs raw)"
@@ -87,8 +123,8 @@ echo "raw system image: $GSI_SIZE bytes"
 # integer in 9..25 first ("Pixel-raven-17-..."), then a codename
 # ("Pixel-cheetah-CinnamonBun-..." -> 17). Field 3 alone produced
 # "cheetah-ACinnamonBun" for the codename shape.
-TAG=$(python3 tools/gsi_tag.py "$GSI_ZIP")
-ANDROID_LEVEL=$(python3 tools/gsi_tag.py --version "$GSI_ZIP" 2>/dev/null || echo unknown)
+TAG="${GSI_TAG:-$(python3 tools/gsi_tag.py "$GSI_ZIP")}"
+ANDROID_LEVEL="${GSI_LEVEL:-$(python3 tools/gsi_tag.py --version "$GSI_ZIP" 2>/dev/null || echo unknown)}"
 printf '%s\n' "$TAG" > work/gsi/TAG
 printf '%s\n' "$ANDROID_LEVEL" > work/gsi/ANDROID_LEVEL
 echo "TAG: $TAG (Android level: $ANDROID_LEVEL)"

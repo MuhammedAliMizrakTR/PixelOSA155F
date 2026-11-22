@@ -84,6 +84,16 @@ class GsiInspectTests(unittest.TestCase):
         self.assertEqual(by_name["system.img"]["expanded_bytes"], 4096 * 1024)
         self.assertEqual(by_name["vendor.img.xz"]["kind"], "compressed-image")
 
+    def test_compressed_system_member_is_accepted(self):
+        archive = os.path.join(self.dir, "gsi_gms_arm64-exp-DP11-028aa375.zip")
+        with zipfile.ZipFile(archive, "w") as zf:
+            zf.writestr("system.img.gz", ext4_stub(block_size=4096, blocks=2048))
+        result = run(TOOL, archive, "--json")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["members"][0]["kind"], "compressed-system-image")
+        self.assertEqual(report["problems"], [])
+
     def test_vbmeta_and_vendor_boot_magics_are_named(self):
         archive = os.path.join(self.dir, "boot-members.zip")
         with zipfile.ZipFile(archive, "w") as zf:

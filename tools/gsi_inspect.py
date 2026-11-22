@@ -29,6 +29,9 @@ EROFS_MAGIC = 0xE0F5E1E2
 HEX = set(b"0123456789abcdefABCDEF")
 IMAGE_SUFFIXES = (".img", ".img.raw", ".bin")
 COMPRESSED_SUFFIXES = (".xz", ".gz", ".lz4", ".zst", ".zip")
+# system.img.{gz,xz,lz4} is a supported donor layout (handled by gsi-inputs.sh);
+# .zst and every non-system compressed member are still refused.
+HANDLED_SYSTEM_SUFFIXES = ("system.img.gz", "system.img.xz", "system.img.lz4")
 
 
 def classify(blob: bytes) -> dict:
@@ -119,6 +122,16 @@ def inspect_zip(path: str) -> dict:
                 lower = info.filename.lower()
                 if info.is_dir():
                     entry["kind"] = "directory"
+                elif lower.endswith(HANDLED_SYSTEM_SUFFIXES):
+                    # A compressed *system* member is fine: rom/gsi-inputs.sh
+                    # decompresses it once into work/gsi/zip/system.img. Any
+                    # other compressed member stays a problem - the pipeline
+                    # only ever consumes the system image.
+                    entry["kind"] = "compressed-system-image"
+                    report["notes"].append(
+                        f"'{info.filename}' is a compressed system image - "
+                        "rom/gsi-inputs.sh decompresses it automatically"
+                    )
                 elif lower.endswith(COMPRESSED_SUFFIXES):
                     entry["kind"] = "compressed-image"
                     report["problems"].append(
@@ -145,8 +158,9 @@ def inspect_zip(path: str) -> dict:
     except zipfile.BadZipFile as exc:
         report["problems"].append(f"not a readable zip: {exc}")
     images = [m for m in report["members"] if m["kind"] == "image"]
-    report["image_count"] = len(images)
-    if not images:
+    packed_system = [m for m in report["members"] if m["kind"] == "compressed-system-image"]
+    report["image_count"] = len(images) + len(packed_system)
+    if not images and not packed_system:
         report["problems"].append("no .img member found in the archive")
     report["largest_image"] = max(
         (m for m in images), key=lambda m: m["zip_size"], default=None

@@ -129,6 +129,11 @@ env.update(INPUTS_DIR=INPUTS, KERNEL_VARIANT=KERNEL, ROM_NAME=ROM_NAME,
            SKIP_GSI_EXTRAS="1")
 if os.environ.get("INPUTS_LOCK"):          # varsa kendi pin dosyanı kullan
     env["INPUTS_LOCK"] = os.environ["INPUTS_LOCK"]
+# Başka bir GSI donoru (Google GSI, PixelOS, ponces AOSP ...) için:
+#   GSI_ZIP=/content/drive/...zip GSI_TAG=google-A17 GSI_LEVEL=17 ROM_NAME=PixelGSI
+for key in ("GSI_ZIP", "GSI_TAG", "GSI_LEVEL", "EXCLUDE_USERDATA"):
+    if os.environ.get(key):
+        env[key] = os.environ[key]
 t0 = time.time()
 log = os.path.join(WORK, "build.log")
 rc = subprocess.call(["/bin/bash", "-c",

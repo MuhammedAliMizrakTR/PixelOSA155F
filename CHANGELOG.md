@@ -4,6 +4,39 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — first boot of a flashed AP, donor identified, any GSI accepted
+
+* **Measured (owner, first-hand):** the built AP was flashed and the system came
+  up. That closes the last unknown of the pipeline itself — packaging, super
+  rebuild and AVB flags survive Odin on this device.
+* The system identifies as **"CinnamonBun"** while showing the Android 16 easter
+  egg, and has no TrebleDroid app. Explained in `docs/GSI-SELECTION.md`: the
+  donor is a *porter repack* of Google's Pixel 7 Pro **Android 17 Beta 2** factory
+  image (fingerprint `google/cheetah_beta/cheetah:CinnamonBun/CP21.260206.011.A1/
+  14911996:user/release-keys`, `ro.build.version.sdk=36`). Beta 2 advertises SDK
+  36, hence "17 codename, 16 level"; a ported factory dump never contains
+  `me.phh.treble.app`, so PHH/TrebleDroid was never present to be missing.
+* Donor handling generalised — no code change needed to switch GSI:
+  * auto-detect falls back from `*-MysticGSI.zip*` to **any zip that really
+    contains a `system.img*` member** (Google GSI, PixelOS, ponces …), and lists
+    the directory instead of guessing when nothing matches;
+  * `system.img.gz` / `.xz` / `.lz4` members are decompressed once
+    (`gsi_inspect` now reports them as `compressed-system-image`, a note instead
+    of a problem; `.zst` and non-system compressed members stay fatal);
+  * `GSI_TAG` / `GSI_LEVEL` state the level explicitly for names that carry no
+    codename (e.g. `gsi_gms_arm64-exp-DP11.260918.006-…`), and `ROM_NAME` sets
+    the AP name (`PixelGSI`, `PixelOS`, …).
+  * the one-paste Colab cell forwards `GSI_ZIP`, `GSI_TAG`, `GSI_LEVEL`,
+    `EXCLUDE_USERDATA` from the environment.
+* Validated on a fixture named exactly like a Google GSI and carrying only
+  `system.img.gz`: auto-detect, decompress, `TAG: google-A17`, plain TAR
+  138,690,560 B, `VERDICT: clean`. Tests: 41 OK.
+* `docs/GSI-SELECTION.md`: ranked A17/A16 donor ladder with upstream links, the
+  wiki's API/VNDKLite rules, what each lineage ships, and the honest note that
+  every alternative is still **unmeasured** on SM-A155F.
+
+---
+
 ## 2026-11-22 — device baseline: stock boots again
 
 * After a full stock restore (BL + stock AP + CP + CSC from the pinned package)

@@ -157,9 +157,10 @@ rom/      numbered build stages (tools, gsi-inputs, extract-ap, repack-super,
 tools/    gsi_inspect, super_inspect, odin_audit, odin_pack, tar_inspect,
           verify_inputs, pin_gate, gsi_tag, make_single_file, mk_synthetic_inputs,
           device_state.sh (read-only adb baseline collector)
-tests/    39 synthetic tests
+tests/    41 synthetic tests
 docs/     GATES.md (gate status + decisions), EVIDENCE.md (measured facts),
-          ROM_BUILD.md (stage reference), 20-FIRST-BUILD.md (runbook)
+          ROM_BUILD.md (stage reference), 20-FIRST-BUILD.md (runbook),
+          GSI-SELECTION.md (which donor to use, and what "PixelOS/PHH" mean)
 inputs/   inputs.lock.json (pins) + inputs.lock.example.json (template)
 colab_build.sh / PixelOSA155F-colab.sh   one-file Colab runner
 ```

@@ -175,12 +175,41 @@ Reproducibility: two consecutive runs, same fixture, same
 Before the `--mtime/--owner/--group` normalisation in `pack-ap.sh`, each run
 hashed differently (observed: `d512b17c…`, then `c9aaead5…`).
 
+## First flash of a built AP (owner report, 2026-11-22)
+
+First-hand report, not a measurement by this project: the AP built here was
+flashed and **the system came up**. Consequences we can state:
+
+* The pipeline's output is flashable and bootable on SM-A155F — packaging,
+  super rebuild (`vendor`/`odm`/`product` from stock, `system` from the donor) and
+  the 256 B `vbmeta.img` with `--flags 3` survived Odin.
+* An A17-codename `system` **does** run on the A15-stock vendor/odm
+  (`A155FXXS7CYG4`), contradicting the earlier "the A16 attempt suggests it does
+  not" note — the earlier no-UI result was the donor, not the vendor gap alone.
+* Reported identity: display name **"CinnamonBun"** + Android **16** easter egg,
+  and **no** TrebleDroid/PHH app.
+
+## Donor identity (from the porter's published metadata)
+
+| Field | Value |
+|---|---|
+| Zip | `Pixel-cheetah-CinnamonBun-14911996-AB-20260227-MysticGSI.zip` (~3.1 GB) |
+| Fingerprint | `google/cheetah_beta/cheetah:CinnamonBun/CP21.260206.011.A1/14911996:user/release-keys` |
+| Build id | `CP21.260206.011.A1` (Google **Android 17 Beta 2** build id) |
+| `ro.build.version.sdk` | 36 |
+| Raw `system` | 5.80 GiB |
+
+That single row explains both reported oddities: Beta 2 still carries **SDK 36**
+(so the *level* is 16 while the *codename* is CinnamonBun), and a porter repack
+of a Pixel factory image contains no `me.phh.treble.app` because it is not a
+TrebleDroid (AOSP + phh patches) build. Handled in `docs/GSI-SELECTION.md`.
+
 ## Unmeasured
 
-* Boot of the real PixelOS artifact on this device — **nothing has been flashed**;
-  the package exists and audits clean, that is all.
-* Whether an A17 system works with the A15 (A155FXXS7CYG4) vendor/odm — unknown;
-  the A16 attempt suggests it does not.
+* Every **other** donor (Google GSI, PixelOS, ponces AOSP, BestGSI, Infinity X,
+  RestlessOS, LineageOS 24.0 …) — one attempt each, nothing flashed.
+* Whether the "CinnamonBun/SDK 36" display confusion disappears with a
+  finished-quarter image (e.g. Google GSI A16 QPR3) — predicted, not measured.
 * Camera/flash/RIL behaviour with the PixelOS donor — unknown (the RIL-fix module
   addresses the ~7h25m ril-daemon hang reported for the unlocked bootloader on
   this device; that is the owner's single report, not a measurement here).
