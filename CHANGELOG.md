@@ -4,6 +4,24 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — mount-order fix: the cell no longer breaks Drive mounting
+
+* Bug found on the first phone-only run: the cell created `…/logs/` and wrote its
+  log **before** mounting Drive, so Colab refused with
+  `ValueError: Mountpoint must not already contain files`. Fixed by mounting
+  first: the log starts as a local file, Drive folders are created only after the
+  mount, and the local log is copied into `logs/` at that point.
+* If `/content/drive` is left non-empty by an earlier failed attempt, the cell now
+  clears it (only when it is *not* a mountpoint) and re-mounts; a real mount is
+  detected with `ismount` and never touched.
+* Fatal errors print one line (`!! DURDU: …`) and the summary; the traceback goes
+  to the log file only, so the phone shows no wall of Python.
+* New `verify_required_present()`: the three kernel tars and the firmware zip are
+  checked in `PixelOSA155F/` **once** before any build ("gerekli dosyalar 4/4"),
+  instead of failing three builds one by one.
+
+---
+
 ## 2026-11-22 — phone-only run: clean install by default, resumable cell
 
 * `EXCLUDE_USERDATA` default in the cell flips to **0** (clean install). Keeping

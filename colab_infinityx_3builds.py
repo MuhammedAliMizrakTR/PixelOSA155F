@@ -70,7 +70,8 @@ if LOCAL_TEST:
 DONOR_LOCAL = os.environ.get("DONOR_LOCAL", "")
 REPO_LOCK = os.environ.get("REPO_LOCK", "")   # boşsa <WORK>/inputs/inputs.lock.json
 
-LOG_PATH = None
+LOG_PATH = None      # her zaman yerel (mount'tan önce de yazılabilir)
+LOG_DRIVE = None     # mount başarılı olunca Drive'daki kopya
 FAILURES = []
 
 
@@ -82,9 +83,14 @@ def now():
 def log(msg=""):
     line = str(msg)
     print(line, flush=True)
-    if LOG_PATH:
-        with open(LOG_PATH, "a", encoding="utf-8") as fh:
-            fh.write(line + "\n")
+    for target in (LOG_PATH, LOG_DRIVE):
+        if not target:
+            continue
+        try:
+            with open(target, "a", encoding="utf-8") as fh:
+                fh.write(line + "\n")
+        except OSError:
+            pass
 
 
 def run(cmd, cwd=None, env=None, check=True, stream_prefix=""):
@@ -272,6 +278,26 @@ def prepare_repo():
         run(["bash", "rom/tools.sh"], cwd=WORK)
     run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-q"], cwd=WORK)
     return head
+
+
+def verify_required_present():
+    """Kernel tar'ları + firmware Drive'da gerçekten var mı? Tek seferde söyle.
+
+    Donor dışındaki her şey (3 kernel + stock firmware) zaten Drive'da; eksikse
+    üç build'i tek tek düşürmek yerine burada, tek satırda söylenir.
+    """
+    import glob
+    with open(REPO_LOCK or os.path.join(WORK, "inputs", "inputs.lock.json"),
+              encoding="utf-8") as fh:
+        repo_lock = json.load(fh)
+    wanted = [e["name"] for e in repo_lock["inputs"]
+              if e.get("role") in ("kernel-boot", "stock-firmware")]
+    missing = [n for n in wanted
+               if not glob.glob(os.path.join(DRIVE, n + "*"))]
+    if missing:
+        raise RuntimeError("Drive'da eksik dosya(lar): " + ", ".join(missing)
+                           + " — bunlar olmadan build başlamaz")
+    log(f"gerekli dosyalar Drive'da: {len(wanted)}/{len(wanted)} (3 kernel + firmware)")
 
 
 def donor_entry(drive_path, md5):
@@ -502,21 +528,36 @@ def write_summary(build_tag, head, results):
 
 
 def main():
-    global LOG_PATH
+    global LOG_PATH, LOG_DRIVE
     build_tag = now()
+    local_base = ("/content" if os.path.isdir("/content")
+                  else (os.environ.get("LOGDIR") or "/tmp"))
+    LOG_PATH = os.path.join(local_base, f"infinityx-3builds-{build_tag}.log")
+    log(f"=== Infinity X 4.2 GAPPS -> 3 kernel build ({build_tag}) ===")
+
+    # 1) MOUNT ÖNCE. /content/drive altına mount'tan önce yazmak Colab'ı kırar.
+    mount_drive()
+
+    # 2) şimdi Drive klasörleri + Drive log kopyası
     os.makedirs(DRIVE, exist_ok=True)
     os.makedirs(os.path.join(DRIVE, "logs"), exist_ok=True)
     os.makedirs(os.path.join(DRIVE, "out"), exist_ok=True)
-    LOG_PATH = os.path.join(DRIVE, "logs", f"infinityx-3builds-{build_tag}.log")
-    log(f"log: {LOG_PATH}")
+    LOG_DRIVE = os.path.join(DRIVE, "logs", f"infinityx-3builds-{build_tag}.log")
+    if os.path.isfile(LOG_PATH):
+        with open(LOG_PATH, encoding="utf-8", errors="replace") as fh:
+            head = fh.read()
+        with open(LOG_DRIVE, "w", encoding="utf-8") as fh:
+            fh.write(head)
+    log(f"log: {LOG_DRIVE}")
     log(f"Colab disk boş: {free_gib('/content'):.1f} GiB | "
         f"Drive boş: {free_gib(DRIVE):.1f} GiB")
 
     preflight()
-    mount_drive()
     local = fetch_donor()
     donor_drive_path, donor_md5 = stage_donor_to_drive(local)
     head = prepare_repo()
+
+    verify_required_present()
 
     results = []
     for kernel in KERNELS:
@@ -547,8 +588,14 @@ def main():
 try:
     main()
 except Exception as fatal:                      # noqa: BLE001
-    log(f"\n!! ÖLÜMCÜL HATA: {fatal} (build başlamadı ya da ortada durdu)")
-    log(traceback.format_exc())
+    log(f"\n!! DURDU: {fatal}")
+    log("(ayrıntılı iz bu log dosyasının sonunda; özet de yazıldı)")
+    if LOG_PATH:
+        try:
+            with open(LOG_PATH, "a", encoding="utf-8") as fh:
+                fh.write(traceback.format_exc())
+        except OSError:
+            pass
     try:
         write_summary(now(), "n/a", [{"kernel": k, "status": "failed"} for k in KERNELS])
     except Exception:                           # noqa: BLE001 - Drive yoksa özet de yazılamaz
