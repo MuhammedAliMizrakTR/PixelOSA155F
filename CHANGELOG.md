@@ -4,6 +4,27 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — Infinity X one-paste cell, 3 kernels, SPLIT_BYTES=0
+
+* `colab_infinityx_3builds.py`: single Colab cell for the A17 TrebleDroid donor.
+  Pinned to Infinity X 4.2 GAPPS (`…-GAPPS-Official-20261120.img.xz`,
+  1,739,656,336 B, GitHub digest `sha256:85eb62ed…c6ef`). Order of operations:
+  preflight → Drive mount → download (resumable) → sha256 check → copy to
+  `PixelOSA155F/` + verify → repo/tools/tests → per-kernel G0 lock → build →
+  audit `VERDICT: clean` gate → upload AP + audit + manifest → re-hash the Drive
+  copy → delete the local AP → `SUMMARY-infinityx-<UTC>.md`.
+* `rom/pack-ap.sh`: new `SPLIT_BYTES` knob (`1900M` default). `SPLIT_BYTES=0`
+  produces **no** transport parts and a JOIN note that says so — a Drive copy
+  needs one file, and the parts cost another ~12 GB of Colab disk per build.
+* Isolation: one kernel failing never stops the other two; the failure is written
+  into the summary. A fatal (bad donor hash, no disk) still leaves a summary.
+* Validated in `LOCAL_TEST=1` against the synthetic donor: 3/3 builds,
+  `VERDICT: clean`, no parts uploaded, Drive re-hash check on; then two failure
+  paths — wrong donor sha256 (aborts before any build, summary lists all three as
+  HATA) and a missing `stock` kernel tar (2/3 build, stock reported, exit 0).
+
+---
+
 ## 2026-11-22 — single-file GSI donors (.img.xz / .img.gz / .img)
 
 * The A17+TrebleDroid builders publish one compressed image, not a zip

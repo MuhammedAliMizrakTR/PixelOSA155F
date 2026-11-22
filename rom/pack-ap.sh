@@ -111,9 +111,16 @@ tar -tf "$OUT_TAR" > work/ap/packed-tar-list.txt
 diff -u "$OUT_MEMBERS" work/ap/packed-tar-list.txt
 TAR_SHA=$(sha256sum "$OUT_TAR" | cut -d' ' -f1)
 printf '%s  %s.tar\n' "$TAR_SHA" "$APBASE" > "out/dist/${APBASE}.SHA256SUMS.txt"
-split -b 1900M -d -a 2 "$OUT_TAR" "out/dist/${APBASE}.tar."
-( cd out/dist && sha256sum "${APBASE}.tar."[0-9][0-9] >> "${APBASE}.SHA256SUMS.txt" )
+# Transport parts exist only because a GitHub release asset is capped at 2 GB.
+# SPLIT_BYTES=0 skips them entirely (a Drive copy needs one file, and the parts
+# double the disk cost of every build).
+SPLIT_BYTES="${SPLIT_BYTES:-1900M}"
+if [ "$SPLIT_BYTES" != "0" ]; then
+  split -b "$SPLIT_BYTES" -d -a 2 "$OUT_TAR" "out/dist/${APBASE}.tar."
+  ( cd out/dist && sha256sum "${APBASE}.tar."[0-9][0-9] >> "${APBASE}.SHA256SUMS.txt" )
+fi
 echo "Plain AP TAR: $OUT_TAR ($(stat -c%s "$OUT_TAR") bytes), sha256=$TAR_SHA"
+if [ "$SPLIT_BYTES" != "0" ]; then
 cat > "out/dist/${APBASE}.JOIN.txt" <<JOIN
 The Odin AP is ONE file: ${APBASE}.tar ($(stat -c%s "$OUT_TAR") bytes)
   sha256: ${TAR_SHA}
@@ -128,7 +135,22 @@ Restore the TAR (any shell, no extra tools):
 
 Flash ${APBASE}.tar as Odin's AP slot. Nothing else in this folder is flashed.
 JOIN
-echo "Release transport parts (no compression/no MD5):"
-ls -lh "out/dist/${APBASE}.tar."*
+else
+cat > "out/dist/${APBASE}.JOIN.txt" <<JOIN
+The Odin AP is ONE file: ${APBASE}.tar ($(stat -c%s "$OUT_TAR") bytes)
+  sha256: ${TAR_SHA}
+
+No transport parts: this build ran with SPLIT_BYTES=0, so the TAR above is the
+only file produced. Nothing else in this folder is flashed.
+
+Flash ${APBASE}.tar as Odin's AP slot.
+JOIN
+fi
+if [ "$SPLIT_BYTES" != "0" ]; then
+  echo "Release transport parts (no compression/no MD5):"
+  ls -lh "out/dist/${APBASE}.tar."*
+else
+  echo "SPLIT_BYTES=0 -> transport parts skipped (single TAR only)"
+fi
 df -h . | tail -1
-echo "=== AP packaged: ${APBASE}.tar (split for transport only; see out/dist/${APBASE}.JOIN.txt) ==="
+echo "=== AP packaged: ${APBASE}.tar ($([ "$SPLIT_BYTES" = "0" ] && echo "single file, no parts" || echo "split for transport only; see out/dist/${APBASE}.JOIN.txt")) ==="

@@ -52,10 +52,27 @@ failure (`set -euo pipefail`). Every stage is also runnable on its own against
 | `KERNEL_VARIANT` | `bakasu` | `bakasu` \| `kernelsunext` \| `stock` |
 | `FW_VERSION` | `A155FXXS7CYG4` | also the kernel tar name component |
 | `ROM_NAME` | `PixelOS` | AP file-name prefix |
-| `GSI_ZIP` | auto (`*-MysticGSI.zip*`) | explicit donor |
-| `SKIP_GSI_EXTRAS` | `1` | `0` embeds the RIL-fix module into the image |
+| `GSI_ZIP` | auto (see below) | explicit donor: a zip with `system.img[.gz/.xz/.lz4]`, or a bare `*.img[.xz/.gz/.lz4]` |
+| `GSI_TAG` | derived from the file name | AP-name tag when the donor name has no codename (`gsi_gms_arm64-exp-…`, `Infinity-X-4.2-…`) |
+| `GSI_LEVEL` | derived from the file name | Android level for `work/gsi/ANDROID_LEVEL` and the version warning |
+| `SKIP_GSI_EXTRAS` | `1` | `0` embeds the RIL-fix module + presets into the image (stage 4/8); `1` leaves the donor untouched |
 | `EXCLUDE_USERDATA` | `0` | `1` leaves the stock `userdata.img` out of the AP (keeps the phone's data) |
+| `SPLIT_BYTES` | `1900M` | transport-part size; `0` = no parts (one TAR only, for a Drive copy) |
 | `KERNEL_SHA` | unset | extra SHA-256 check for the kernel tar (G0 already pins MD5) |
+
+**Donor auto-detection order** (`GSI_ZIP` unset): `*-MysticGSI.zip*` → any `.zip`
+that really contains a `system.img*` member → a bare `*.img.xz` / `*.img.gz` /
+`*.img` (skipping `boot*`, `vbmeta*`, `recovery*`, `super*`, `dtbo*`,
+`userdata*`). Set `GSI_ZIP` when the folder holds more than one candidate.
+
+## Multi-build cell
+
+`colab_infinityx_3builds.py` is the one-paste Colab cell for the A17 TrebleDroid
+donor: it downloads the pinned Infinity X image, verifies GitHub's sha256, drops
+it in `PixelOSA155F/` on Drive, writes one G0 pin file per kernel, builds
+`bakasu` + `kernelsunext` + `stock`, uploads each AP with its audit and manifest
+(no transport parts — `SPLIT_BYTES=0`), re-hashes the Drive copy, and writes
+`SUMMARY-infinityx-<UTC>.md`. A failed build is isolated: the others continue.
 
 ## Re-running one stage
 

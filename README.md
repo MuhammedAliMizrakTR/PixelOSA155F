@@ -163,6 +163,7 @@ docs/     GATES.md (gate status + decisions), EVIDENCE.md (measured facts),
           GSI-SELECTION.md (which donor to use, and what "PixelOS/PHH" mean)
 inputs/   inputs.lock.json (pins) + inputs.lock.example.json (template)
 colab_build.sh / PixelOSA155F-colab.sh   one-file Colab runner
+colab_infinityx_3builds.py               one-paste cell: Infinity X A17 x 3 kernels -> Drive
 ```
 
 ## Outputs
