@@ -23,22 +23,30 @@ flashes anything.** A `clean` verdict from `tools/odin_audit.py` means the
 | Gate | What it proves | State |
 |---|---|---|
 | G0 hash/size pins | every input pinned in `inputs/inputs.lock.json` by Drive id + size + MD5; `tools/pin_gate.py` re-hashes before use | **PASS** — GSI MD5 cross-checked Drive ↔ SourceForge RSS (`81f41e26…a61a`, 3,148,371,077 B) |
-| G1 stock AP member order | order recorded from the stock AP and replayed verbatim | **PASS on the synthetic fixture**; real AP not extracted here (see below) |
-| G2 rebuilt super | real liblp, `vendor`+`odm`+`product` kept, fits `super` | **PASS on the synthetic fixture** (lpmake/lpdump round-trip) |
-| G3 packaging | plain TAR, no MD5 footer, no LZ4 member, stock order, `vbmeta* --flags 3` | **PASS on the synthetic fixture**, byte-reproducible |
-| G4 audit | `tools/odin_audit.py` verdict | **`VERDICT: clean`** on the synthetic artifact |
+| G1 stock AP member order | order recorded from the stock AP and replayed verbatim | **PASS on the real stock AP** (20 entries, `meta-data/` included) and on the fixture |
+| G2 rebuilt super | real liblp, `vendor`+`odm`+`product` kept, fits `super` | **PASS on the real super** — 9,434,177,656 B sparse / 11,744,051,200 B expanded, all 6 logical partitions present |
+| G3 packaging | plain TAR, no MD5 footer, no LZ4 member, stock order, `vbmeta* --flags 3` | **PASS on the real artifact**: 12,222,085,120 B plain TAR, 0 `.lz4` members, byte-reproducible |
+| G4 audit | `tools/odin_audit.py` verdict | **`VERDICT: clean`** on the real artifact (rc=0) |
 
-**The real multi-GB build was not run in this session**, and no real AP TAR is
-claimed. Reason, precisely: the only egress from this sandbox is
-`github.com` / `api.github.com` / `pypi.org` / `registry.npmjs.org`, and the
-Google Drive connector stops at 100 MB per file — the donor GSI is 3.1 GB and the
-stock firmware is 6.9 GB, so neither can be pulled here. `drive.google.com` and
-`sourceforge.net` are unreachable from the shell (TLS reset), which is why the
-RSS cross-check was done through the page-fetch path instead.
-Run the one-file Colab runner (below) where Drive *is* mounted to get the real
-artifact; every gate is already in place and tested.
+### The real build — done by the owner in Colab (2026-11-22)
 
-## Latest measured run (synthetic fixture, real toolchain)
+```
+AP_SM-A155F_PixelOS-cheetah-A17_bakasu_A155FXXS7CYG4.tar
+  size    12,222,085,120 B
+  sha256  f0cc78c9ae26a4066ffd0bd0888e1d2be63673ca44828d658beeaedaedbe3662
+  build   1348 s · rc=0 · VERDICT: clean · 20 stock members in stock order
+```
+
+Built from the one-file Colab runner against the pinned A17 donor
+(`Pixel-cheetah-CinnamonBun-…`, G0 verified in-run) and the real
+`A155FXXS7CYG4` firmware. Boot is **unmeasured** — nothing was flashed.
+
+The agent's own sandbox cannot pull the 3.1 GB GSI or the 6.9 GB firmware (Drive
+connector caps at 100 MB per file; shell egress is limited to a few hosts), so the
+agent-side proof is the synthetic fixture below. Both paths exercise the same
+code; the real run is the one that produced the artifact above.
+
+## Latest measured run — synthetic fixture, real toolchain (agent side)
 
 ```
 $ bash tools/mk_synthetic_inputs.sh /tmp/pixelinputs
@@ -57,14 +65,15 @@ Two consecutive runs over the same fixture produce the **same** SHA-256
 The fixture's contents are synthetic (`boot.img` is random bytes), so this hash
 identifies *this* fixture only — it is a pipeline proof, not a ROM.
 
-`python3 -m unittest discover -s tests` → **39 tests OK** (the 28 original
-synthetic tests plus 11 for the new G0 gate and TAG parser).
+`python3 -m unittest discover -s tests` → **40 tests OK** (the 28 original
+synthetic tests plus 12 for the G0 gate, the TAG parser and the AVB0/VNDRBOOT
+classifiers).
 
 ## Quick start
 
 ```bash
 bash rom/tools.sh                        # lpmake/lpunpack/lpdumps, lz4, e2fsprogs, avbtool (no apt)
-python3 -m unittest discover -s tests    # 39 OK
+python3 -m unittest discover -s tests    # 40 OK
 ```
 
 Synthetic end-to-end (never touches the real GSI/firmware, ~10 s):

@@ -84,6 +84,18 @@ class GsiInspectTests(unittest.TestCase):
         self.assertEqual(by_name["system.img"]["expanded_bytes"], 4096 * 1024)
         self.assertEqual(by_name["vendor.img.xz"]["kind"], "compressed-image")
 
+    def test_vbmeta_and_vendor_boot_magics_are_named(self):
+        archive = os.path.join(self.dir, "boot-members.zip")
+        with zipfile.ZipFile(archive, "w") as zf:
+            zf.writestr("vbmeta.img", b"AVB0" + b"\x00" * 252)
+            zf.writestr("vendor_boot.img", b"VNDRBOOT" + b"\x00" * 4096)
+        result = run(TOOL, archive, "--json")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        report = json.loads(result.stdout)
+        by_name = {m["name"]: m for m in report["members"]}
+        self.assertEqual(by_name["vbmeta.img"]["container"], "avb-vbmeta")
+        self.assertEqual(by_name["vendor_boot.img"]["container"], "android-vendor-boot")
+
     def test_extract_refuses_overwrite(self):
         out = os.path.join(self.dir, "out")
         first = run(TOOL, self.zip, "--extract", out, "--only", "system.img")

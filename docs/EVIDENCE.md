@@ -53,6 +53,61 @@ The firmware zip itself (`a155f-contents.txt` in Drive) contains:
           719  _FirmwareInfo_Samfw.com.txt
 ```
 
+## Real PixelOS run (2026-11-22, owner's Colab, one-file runner)
+
+First real artifact of this line. Every gate ran on the real bytes.
+
+```
+AP_SM-A155F_PixelOS-cheetah-A17_bakasu_A155FXXS7CYG4.tar
+  size      12,222,085,120 B
+  sha256    f0cc78c9ae26a4066ffd0bd0888e1d2be63673ca44828d658beeaedaedbe3662
+  build     1348 s, rc=0, VERDICT: clean
+  members   19 files + the stock `meta-data/` directory entry, stock order
+  donor     Pixel-cheetah-CinnamonBun-… (A17), G0 MD5 verified in-run
+  firmware  SAMFW.COM_SM-A155F_XSG_A155FXXS7CYG4_fac.zip, G0 MD5 verified in-run
+  kernel    bakasu_35262_… (boot.img 67,108,864 B)
+```
+
+Gate evidence from the run itself:
+
+| Gate | Observed |
+|---|---|
+| G0 | GSI `81f41e26…a61a` (3,148,371,077 B), kernel `39800312…8054`, firmware `bea1131d…9b57` — all `G0 gate: ok` |
+| G1 | 20 stock AP entries captured, including `recovery`, `userdata`, `misc.bin`, the `*-verified.img` set, `meta-data/` and `meta-data/fota.zip` |
+| G2 | stock super 11,744,051,200 B → 6 partitions unpacked; new super 9,434,177,656 B sparse (11,744,051,200 B expanded), `main` group cap 11,739,856,896 B |
+| G3 | plain TAR, `md5 footer: False`, no `.lz4` member, `vbmeta*` 256 B each (`--flags 3`) |
+| G4 | `VERDICT: clean`, rc=0 |
+
+Super layout, stock vs rebuilt (bytes):
+
+```
+              stock            rebuilt (GSI as system)
+system        5,769,207,808    6,233,522,176   (+464,314,368 from the donor)
+product       1,837,219,840    1,837,219,840   unchanged
+vendor        1,184,497,664    1,184,497,664   unchanged
+system_ext      525,639,680      525,639,680   unchanged
+vendor_dlkm      36,745,216       36,745,216   unchanged
+odm               1,650,688        1,650,688   unchanged
+```
+
+The rebuilt system is 464 MB larger than stock. It still fits inside the stock
+`main` group, so no partition geometry beyond `system` changed.
+
+### Three things this run proved that matter for flashing
+
+1. **`userdata.img` is in the package** — stock member, 1,418,011,288 B sparse
+   (17,179,869,184 B = 16 GiB expanded). Flashing this AP as-is overwrites the
+   userdata partition: **data loss**. If the data should survive, `userdata.img`
+   must be left out of the AP (and the super/vbmeta members kept).
+2. **The artifact is ~3.9 GB larger than the stock AP** (12.22 GB vs 8.34 GB)
+   because `super.img` is raw sparse (9.43 GB) instead of LZ4 (5.87 GB) and
+   `userdata.img`/`recovery.img` are decompressed. That is the cost of the
+   "no LZ4 members" rule, not a mistake.
+3. **Two audit labels were wrong, not the members**: `vendor_boot.img` and
+   `vbmeta*.img` printed `container=unknown`. Both magics (`VNDRBOOT`, `AVB0`)
+   are now classified by `tools/gsi_inspect.py`, so later audits say
+   `android-vendor-boot` / `avb-vbmeta` instead of looking suspicious.
+
 ## Prior build on this device (NothingOS line, 2026-11-22)
 
 ```
@@ -106,7 +161,8 @@ hashed differently (observed: `d512b17c…`, then `c9aaead5…`).
 
 ## Unmeasured
 
-* Boot of any PixelOS artifact on this device — **no device run has happened**.
+* Boot of the real PixelOS artifact on this device — **nothing has been flashed**;
+  the package exists and audits clean, that is all.
 * Whether an A17 system works with the A15 (A155FXXS7CYG4) vendor/odm — unknown;
   the A16 attempt suggests it does not.
 * Camera/flash/RIL behaviour with the PixelOS donor — unknown (the RIL-fix module

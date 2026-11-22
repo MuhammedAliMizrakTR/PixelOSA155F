@@ -4,6 +4,39 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — first real PixelOS AP (owner's Colab)
+
+### Result
+
+* `AP_SM-A155F_PixelOS-cheetah-A17_bakasu_A155FXXS7CYG4.tar` —
+  12,222,085,120 B, sha256
+  `f0cc78c9ae26a4066ffd0bd0888e1d2be63673ca44828d658beeaedaedbe3662`,
+  built in 1348 s from the one-file Colab runner with the real A17 donor GSI and
+  the real `A155FXXS7CYG4` firmware; `odin_audit` **`VERDICT: clean`** (rc=0).
+* G0 verified in-run for all three inputs (GSI `81f41e26…a61a`, kernel
+  `39800312…8054`, firmware `bea1131d…9b57`).
+* Rebuilt super: 9,434,177,656 B sparse / 11,744,051,200 B expanded, six logical
+  partitions, `system` 6,233,522,176 from the GSI (+464,314,368 vs stock), the
+  other five byte-identical to stock.
+* 20 stock AP entries replayed in stock order, including `meta-data/`,
+  `meta-data/fota.zip`, `userdata.img`, `recovery.img` and the `*-verified.img`
+  set; zero `.lz4` members, no MD5 footer.
+
+### Fixed
+
+* `tools/gsi_inspect.py` now classifies `AVB0` (`avb-vbmeta`) and `VNDRBOOT`
+  (`android-vendor-boot`). The real audit printed `container=unknown` for
+  `vendor_boot.img` and both `vbmeta*.img`; the members were fine, the label was
+  blind. Tests: 40 OK.
+
+### Notes for the owner
+
+* The AP carries the stock `userdata.img` (16 GiB expanded): flashing it wipes
+  user data. Excluding that member is a deliberate option, not a default.
+* The artifact is ~3.9 GB larger than the stock AP because `super.img` is raw
+  sparse instead of LZ4 — that is the "no LZ4 members" rule.
+* Boot remains **unmeasured**; nothing was flashed.
+
 ## 2026-11-22 — first PixelOS session
 
 ### Added — build line

@@ -67,6 +67,15 @@ def classify(blob: bytes) -> dict:
     )[0] == EROFS_MAGIC:
         info = {"container": "erofs", "magic": "0xe0f5e1e2"}
         return info
+    # AVB0 = avbtool vbmeta image (verification-disabled images made in stage 6/8).
+    if blob[:4] == b"AVB0":
+        info = {"container": "avb-vbmeta", "magic": "AVB0"}
+        return info
+    # VNDRBOOT = the AOSP/MTK vendor_boot header; without this it showed up as
+    # "unknown" in odin_audit even though the member is perfectly normal.
+    if blob[:8] == b"VNDRBOOT":
+        info = {"container": "android-vendor-boot", "magic": "VNDRBOOT"}
+        return info
     if blob[:8] in (b"ANDROID!", b"CHROMEOS"):
         info = {"container": "chromeos-boot" if blob[:8] == b"CHROMEOS" else "android-boot"}
         return info
