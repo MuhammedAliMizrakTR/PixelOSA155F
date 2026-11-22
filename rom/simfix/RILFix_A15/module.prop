@@ -1,0 +1,6 @@
+id=rilfix_a15
+name=A15 RIL Watchdog Fix
+version=v1.0
+versionCode=1
+author=GrapheneOS-SM-A155 project (method: rev.s @XDA; module concept: itsfaris @XDA)
+description=Prevents the ~7h25m ril-daemon hang (SIM/network loss) on bootloader-unlocked SM-A155F by restarting ril-daemon every 6 hours. Works with KernelSU-Next, BakaSU, Magisk.

@@ -1,0 +1,118 @@
+{
+  "schema": "pixelosa155f.inputs/1",
+  "subject": "PixelOS-GSI -> Odin AP TAR for SM-A155F (system from GSI, stock vendor/odm/product kept)",
+  "note": "Every byte the build reads is pinned here. Missing pin, wrong size or wrong MD5 aborts the build (gate G0); the pipeline never warns-and-continues. tools/pin_gate.py re-hashes the file, tools/verify_inputs.py checks a whole folder. Google Drive copy suffixes ('... adlı dosyanın kopyası', '... (1)') are tolerated by matching the longest pinned name that is a prefix of the real file name.",
+  "pinned_at": "2026-11-22",
+  "pinned_by": "build agent (arena/802af16c-pixelosa155f session)",
+  "owner_drive": {
+    "folder": "PixelOSA155F",
+    "folder_id": "1RmXoYxzI0gUiPe_K0VKpOp0WksSH7gde",
+    "second_copy_folder_id": "1_X80WNoJ_9nCJHIuTUfb8GLe8W5T1iMR"
+  },
+  "inputs": [
+    {
+      "role": "donor-gsi-primary",
+      "name": "Pixel-cheetah-CinnamonBun-14911996-AB-20260227-MysticGSI.zip",
+      "drive_id": "1aP2Uuxb1AHPzDrGUFL1FNvngZ7Jvihal",
+      "drive_folder": "PixelOSA155F",
+      "url": "https://sourceforge.net/projects/mystic-gsi-updates/files/Generic/Pixel-cheetah-CinnamonBun-14911996-AB-20260227-MysticGSI.zip/download",
+      "size": 3148371077,
+      "md5": "81f41e26c9991743674455520db0a61a",
+      "md5_source": "drive-metadata + sourceforge-rss cross-check: MATCH",
+      "md5_cross_check": {
+        "drive": "81f41e26c9991743674455520db0a61a",
+        "sourceforge_rss": "81f41e26c9991743674455520db0a61a",
+        "rss": "https://sourceforge.net/projects/mystic-gsi-updates/rss?path=/Generic",
+        "result": "match"
+      },
+      "android_level": 17,
+      "android_level_source": "filename codename 'CinnamonBun' -> Android 17 (tools/gsi_tag.py)",
+      "slot_layout": "AB",
+      "arch": "arm64",
+      "use": "arm64 AB Pixel-family GSI; becomes the 'system' logical partition",
+      "caveat": "A17 donor. The measured rule for this device is A15 first (the A16 NothingOS AP booted past the Samsung logo but never reached the system UI). Staging this donor is deliberate and boot success stays UNMEASURED until a device logcat exists."
+    },
+    {
+      "role": "kernel-boot",
+      "variant": "bakasu",
+      "name": "bakasu_35262_susfs_v2.4.0_A155FXXS7CYG4_A15_GKI.tar",
+      "drive_id": "1g0t5YLzYH4Q4MM4naEkI_YX6fnXegYly",
+      "drive_folder": "PixelOSA155F",
+      "size": 67112960,
+      "md5": "39800312d85035ff2c8f94bdf5f38054",
+      "md5_source": "drive-metadata (identical in 3 independent Drive copies)",
+      "use": "default KERNEL_VARIANT; boot.img member only, packed raw/uncompressed"
+    },
+    {
+      "role": "kernel-boot",
+      "variant": "kernelsunext",
+      "name": "kernelsunext_33548_susfs_v2.4.0_A155FXXS7CYG4_A15_GKI.tar",
+      "drive_id": "1-TK4mU5vmd2wrr9Xy8iZkANPbQfqXHhJ",
+      "drive_folder": "PixelOSA155F",
+      "size": 67112960,
+      "md5": "472a59d49fcc94c4a66ff4186210cd65",
+      "md5_source": "drive-metadata",
+      "use": "KERNEL_VARIANT=kernelsunext; same 67,112,960-byte shape, boot.img only"
+    },
+    {
+      "role": "kernel-boot",
+      "variant": "stock",
+      "name": "stock_optimized_5.10.226_A155FXXS7CYG4_A15_GKI.tar",
+      "drive_id": "16vhmoO3DujehDIKxBfJ7MscupICJ-MLf",
+      "drive_folder": "PixelOSA155F",
+      "size": 67112960,
+      "md5": "161fe2dbb5cfc5420727fd7f89ed9342",
+      "md5_source": "drive-metadata",
+      "use": "KERNEL_VARIANT=stock (vanilla); no root, so the SIM-fix module cannot be used"
+    },
+    {
+      "role": "stock-firmware",
+      "name": "SAMFW.COM_SM-A155F_XSG_A155FXXS7CYG4_fac.zip",
+      "drive_id": "1Pa7_6qKDLXBLib9z-AegwC1SBqWHPGAn",
+      "drive_folder": "PixelOSA155F",
+      "size": 6904157493,
+      "md5": "bea1131d9bddabc5630411a982059b57",
+      "md5_source": "drive-metadata (identical in 3 independent Drive copies)",
+      "use": "vendor/odm/product bytes + the AP member ORDER that is the Odin contract; also the rollback package",
+      "ap_member": {
+        "name": "AP_A155FXXS7CYG4_A155FXXS7CYG4_MQB99305356_REV00_user_low_ship_MULTI_CERT_meta_OS15.tar.md5",
+        "size": 8341575802
+      }
+    }
+  ],
+  "device_facts": {
+    "device": "SM-A155F (Samsung Galaxy A15 4G)",
+    "soc": "MediaTek MT6789 / Helio G99",
+    "kernel": "GKI Linux 5.10.226",
+    "fw_version": "A155FXXS7CYG4",
+    "super_device_size": 11744051200,
+    "super_used_size": 9354960896,
+    "group_main_max_size": 11739856896,
+    "partitions": {
+      "system": 5769207808,
+      "odm": 1650688,
+      "product": 1837219840,
+      "system_ext": 525639680,
+      "vendor": 1184497664,
+      "vendor_dlkm": 36745216
+    },
+    "source": "owner lpdumps of the stock super (a155f-super-metadata.json in Drive); the pipeline re-reads the real super at stage 5/8 and does not trust these numbers",
+    "stock_ap_member_order": [
+      {"name": "boot.img.lz4", "size": 21020551},
+      {"name": "vendor_boot.img.lz4", "size": 8580297},
+      {"name": "dtbo.img.lz4", "size": 98045},
+      {"name": "super.img.lz4", "size": 5865008566},
+      {"name": "vbmeta.img.lz4", "size": 3515},
+      {"name": "vbmeta_system.img.lz4", "size": 2819},
+      {"name": "recovery.img.lz4 / userdata.img.lz4 / misc / meta-data/ / fota.zip / *-verified.img", "size": null, "note": "present in the real stock AP; the order of the listed members above must be preserved"}
+    ]
+  },
+  "prior_evidence": {
+    "date": "2026-11-22",
+    "build": "AP_SM-A155F_NothingOS-Asteroids-A16_bakasu_A155FXXS7CYG4.tar",
+    "tar_size": 10904903680,
+    "tar_sha256": "a141847c93d9b144f78012983f4bcd195241bb4451fd4fa6b36471f9f2329b34",
+    "result": "bootloader accepted the package, the device passed the Samsung logo, the system UI never came up (~15 min)",
+    "conclusion": "packaging is accepted by the hardware; that ROM did not work. Boot success for the PixelOS donor stays unmeasured."
+  }
+}

@@ -1,0 +1,25 @@
+# Build state and artifacts (multi-GB, never committed)
+/work/
+/out/
+build.log
+
+# Toolchains provisioned by rom/tools.sh (cloned/built, reproducible)
+/tools/lptools/
+/tools/lz4/
+/tools/e2fsprogs/
+/tools/avb/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Source package / scratch material kept out of the build
+/google_drive/
+*.zip
+!rom/**/*.zip
+*.img
+*.tar
+
+# Editor / OS noise
+.DS_Store
+*.swp
