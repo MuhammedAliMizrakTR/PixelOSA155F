@@ -4,6 +4,26 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — mount really fixed this time: cleanup + fallback mountpoint
+
+The previous patch only reordered `main()`; `mount_drive()` itself was never
+replaced, so the second run failed the same way (an earlier failed attempt had
+left `MyDrive/...` under `/content/drive`, and Colab refuses a non-empty
+mountpoint).
+
+* `mount_drive()` is now the rewritten version: it clears a **not-mounted**
+  `/content/drive` (including dangling `fusermount -uz` / `umount -l` children),
+  and if that point cannot be cleared or the mount does not verify, it mounts at
+  **`/content/gdrive`** instead; `DRIVE` is recomputed from whichever point won.
+* `_clear_mountpoint()` never touches a real mount (`os.path.ismount` guard).
+* Verified against a fake `google.colab.drive` that reproduces Colab's
+  `ValueError`: dirty mountpoint → cleaned → mount OK; unclearable point →
+  falls back to the second point; both failing → one clear Turkish message.
+* `NO_RUN=1` lets the module be imported for inspection without running `main()`.
+* End-to-end `LOCAL_TEST=1` again: 4/4 inputs, 3/3 `VERDICT: clean`, 41 tests OK.
+
+---
+
 ## 2026-11-22 — mount-order fix: the cell no longer breaks Drive mounting
 
 * Bug found on the first phone-only run: the cell created `…/logs/` and wrote its

@@ -32,6 +32,10 @@ REPO = "https://github.com/MuhammedAliMizrakTR/PixelOSA155F.git"
 BRANCH = "arena/802af16c-pixelosa155f"
 
 WORK = os.environ.get("WORK", "/content/PixelOSA155F")
+# Drive mount noktası: /content/drive kirli kalabilir; o zaman /content/gdrive.
+# DRIVE, mount başarılı olunca mount_drive() içinde hesaplanır.
+MOUNT_CANDIDATES = ["/content/drive", "/content/gdrive"]
+MOUNT_ROOT = os.environ.get("MOUNT_ROOT", "")
 DRIVE = os.environ.get("DRIVE", "/content/drive/MyDrive/PixelOSA155F")
 DL_DIR = os.environ.get("DL_DIR", "/content/dl")
 
@@ -190,16 +194,73 @@ def preflight():
                 "atlanır ve özete yazılır (hiçbir şey silinmez).")
 
 
+def _clear_mountpoint(mp):
+    """Mount noktasını boşalt. Gerçek bir mount'a ASLA dokunmaz.
+
+    True  = kullanılabilir (boş ya da zaten mount)
+    False = temizlenemedi -> sıradaki mount noktasına geçilir
+    """
+    if os.path.ismount(mp):
+        return True
+    if os.path.islink(mp):
+        os.unlink(mp)
+        return True
+    if not os.path.exists(mp):
+        os.makedirs(mp, exist_ok=True)
+        return True
+    # Önceki oturumdan kalan çözülmemiş FUSE mount'ları varsa çöz.
+    for root, _dirs, _files in list(os.walk(mp)):
+        if root != mp and os.path.ismount(root):
+            for cmd in (["fusermount", "-uz", root], ["umount", "-l", root]):
+                subprocess.run(cmd, capture_output=True, check=False)
+    shutil.rmtree(mp, ignore_errors=True)
+    if not os.path.exists(mp):
+        os.makedirs(mp, exist_ok=True)
+    return not (os.path.isdir(mp) and os.listdir(mp))
+
+
 def mount_drive():
+    """Drive'ı bağla ve DRIVE yolunu buna göre ayarla.
+
+    Colab'ın 'Mountpoint must not already contain files' hatası, mount
+    noktasında artık kalmış dosyalar yüzünden çıkar (bir önceki başarısız
+    deneme oraya yazmışsa). Bu yüzden: temizle -> olmuyorsa ikinci noktaya geç.
+    """
+    global MOUNT_ROOT, DRIVE
     log("\n=== 1/7 Google Drive ===")
     if LOCAL_TEST:
         log("LOCAL_TEST=1 -> mount atlandı")
         return
     from google.colab import drive  # Colab'da var
-    if os.path.ismount("/content/drive"):
-        log("Drive zaten bağlı")
-    else:
-        drive.mount("/content/drive")
+
+    for mp in MOUNT_CANDIDATES:
+        if os.path.ismount(mp):
+            MOUNT_ROOT = mp
+            DRIVE = os.path.join(mp, "MyDrive", "PixelOSA155F")
+            log(f"Drive zaten bağlı: {mp}")
+            return
+
+    last_err = None
+    for mp in MOUNT_CANDIDATES:
+        if not _clear_mountpoint(mp):
+            log(f"{mp} temizlenemedi -> sıradaki mount noktası")
+            continue
+        log(f"Drive bağlanıyor: {mp} (izin penceresi çıkarsa onayla)")
+        try:
+            drive.mount(mp, force_remount=False)
+        except Exception as exc:                       # noqa: BLE001
+            last_err = exc
+            log(f"{mp} bağlanamadı: {exc}")
+            continue
+        if os.path.ismount(mp):
+            MOUNT_ROOT = mp
+            DRIVE = os.path.join(mp, "MyDrive", "PixelOSA155F")
+            log(f"Drive bağlandı: {mp}")
+            return
+        log(f"{mp} mount doğrulanamadı -> sıradaki")
+
+    raise RuntimeError("Drive bağlanamadı. Colab'da Runtime > Restart runtime "
+                       "deyip hücreyi tekrar çalıştır. Son hata: " + str(last_err))
 
 
 def fetch_donor():
@@ -585,9 +646,12 @@ def main():
         log("Eksik kalanlar için log dosyasına bak: " + str(LOG_PATH))
 
 
-try:
+if os.environ.get("NO_RUN") == "1":
+    pass                      # test/denetim için: modülü import et, main() çalışmasın
+else:
+  try:
     main()
-except Exception as fatal:                      # noqa: BLE001
+  except Exception as fatal:                      # noqa: BLE001
     log(f"\n!! DURDU: {fatal}")
     log("(ayrıntılı iz bu log dosyasının sonunda; özet de yazıldı)")
     if LOG_PATH:
@@ -598,6 +662,6 @@ except Exception as fatal:                      # noqa: BLE001
             pass
     try:
         write_summary(now(), "n/a", [{"kernel": k, "status": "failed"} for k in KERNELS])
-    except Exception:                           # noqa: BLE001 - Drive yoksa özet de yazılamaz
+    except Exception:                       # noqa: BLE001 - Drive yoksa özet de yazılamaz
         pass
     raise
