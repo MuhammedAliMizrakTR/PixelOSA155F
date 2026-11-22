@@ -4,6 +4,25 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — A17 + TrebleDroid shortlist (verified upstream)
+
+* `docs/GSI-SELECTION.md` §7: six A17 donors checked against their own release
+  pages. Upstream fact: phhusson/TrebleDroid's last release is
+  `android_16.0.0_r1 ci-20250617` — **no upstream A17**, so "A17 + TrebleDroid"
+  always means a builder forking the patch layer.
+* TrebleDroid app confirmed by the projects' own text for: **Infinity X 4.2**
+  (release notes reference the Treble app; README: "GSI trebledroid"),
+  **BestGSI** (`Settings → System → TrebleDroid Settings`), **LineageOS 24.0 by
+  Aizner** ("TrebleDroid Settings included"). Not stated for AndyYan's build →
+  marked unverified, not claimed.
+* Google GSI GMS A17 (QPR1 `CP3A.260905.010`, QPR3 beta `DP11.260918.006`) is
+  the only real Pixel-UI A17 image and has no phh layer at all — recorded as a
+  trade-off, not a defect.
+* VNDK gate recorded: Infinity X documents VNDK v28–v34; BestGSI ships one build
+  per VNDK → check `ro.vndk.version` on the phone before choosing.
+
+---
+
 ## 2026-11-22 — first boot of a flashed AP, donor identified, any GSI accepted
 
 * **Measured (owner, first-hand):** the built AP was flashed and the system came

@@ -179,3 +179,53 @@ VERDICT: clean
 Each of these is **one unmeasured attempt** on A155F. Keep the stock AP and the
 CSC from `SAMFW.COM_SM-A155F_XSG_A155FXXS7CYG4_fac.zip` at hand, because the
 recovery path that already worked once is the stock AP alone (no BL, no CSC).
+
+---
+
+## 7. A17 + TrebleDroid shortlist (checked 2026-11-22, upstream pages only)
+
+**Upstream fact first:** phhusson/TrebleDroid's own last release is
+`android_16.0.0_r1 ci-20250617` (A16) — there is **no upstream A17 build** from
+phhusson. Every "A17 + TrebleDroid" image is a builder who forked the
+TrebleDroid patch layer (cawilliamson's `android_device_phh_treble`, Doze-off,
+Aizner, AndyYan). Google's own A17 GSI exists, but it has no phh patches and no
+`me.phh.treble.app` by design.
+
+| # | Image | A17 build | TrebleDroid app | Google apps | Verified source |
+|---|---|---|---|---|---|
+| 1 | **Infinity X 4.2** (Doze-off) | `2026-11-20`, sec Nov 2026, "A17 QPR0" | **yes** — release notes say *"Disable Treble app → Misc → Universal legacy-kernel BPF fallback"*; README: *"This is a GSI trebledroid with patches…"* | GAPPS variant (1.62 GB `.img.xz`, sha256 `85eb62ed…`) + VANILLA (1.02 GB, sha256 `6320a85f…`), both `arm64-ab`, signed | `github.com/Doze-off/ProjectInfinity-X_gsi/releases/tag/2026-11-20` |
+| 2 | **BestGSI 17QPR0** (amintum) | 21 Nov 2026, sec Oct 2026 | **yes** — README settings path *"Settings → System → TrebleDroid Settings → Transsion Settings"* | GAppStore (GrapheneOS style, sandboxed) / Vanilla / MicroG; builds per VNDK (28…31+) | `github.com/amintum/BestGSI` (base = RestlessOS; **no source**, smali-patched repack — the author says so) |
+| 3 | **RestlessOS QPR0** (cawilliamson) | 26 Oct / 02 Nov 2026 | yes (the patch layer BestGSI inherits) | none bundled (GrapheneOS hardening, sandboxed Play) | `github.com/cawilliamson/treble_restlessos`, mirror `build.chrisaw.io` |
+| 4 | **LineageOS 24.0** (Aizner/eyzner) | `lineage-24.0-20261029` (newer 04 Nov), sec 2026-10-01 | **yes** — release notes: *"TrebleDroid Settings included"*, no bundled PHH SU | Vanilla | `github.com/eyzner/LineageOS-GSI/releases` |
+| 5 | **LineageOS 24.0** (AndyYan) | `lineage-24.0-20261107-UNOFFICIAL-gsi_arm64` | **unverified** (built off phh trees; not stated in the release) | Vanilla | SourceForge `andyyan-gsi` |
+| 6 | Google GSI GMS, A17 QPR1 | `CP3A.260905.010` / QPR3 beta `DP11.260918.006` | **no** (Google's own reference image) | **GMS included** — the actual Pixel UI | `dl.google.com/developers/android/cinnamonbun/images/gsi/` |
+| — | *Porter repacks* (Mystic, …) | e.g. `Pixel-cheetah-CinnamonBun-14911996` | no, OEM leftovers | varies | Telegram / SourceForge listings only — not on the wiki list |
+
+**VNDK is the gate that decides between them.** Infinity X documents VNDK
+`v28…v34` inside `system_ext/apex`; BestGSI ships one build per VNDK. On the
+phone:
+
+```bash
+adb shell getprop ro.vndk.version      # 34 -> Infinity X/BestGSI fine; 35+ -> prefer Lineage 24 / Google GSI
+adb shell getprop ro.product.cpu.abi   # arm64-v8a -> arm64-ab / arm64_bvN images
+```
+
+**Ranking for SM-A155F, if "A17 + TrebleDroid" is the hard requirement:**
+
+1. **Infinity X 4.2 GAPPS** — freshest (21 Nov, Nov security), explicitly
+   TrebleDroid, signed, sha256 published, and the maintainer ships device
+   patches (BPF fallback matters on MediaTek); heaviest UI, most options.
+2. **LineageOS 24.0 (Aizner)** — cleanest and smallest, TrebleDroid Settings
+   stated in the release notes, vanilla only; best "just works" odds and speed.
+3. **BestGSI** — most opinionated/modded (transparent QS, HUD widgets, duress
+   PIN); no source and it is a repack, so it is an audit trade-off.
+4. **RestlessOS** — the same base as BestGSI without the mods; hardened, no
+   Google apps.
+5. **LineageOS 24.0 (AndyYan)** — the classic, but TrebleDroid app presence is
+   not stated anywhere I could verify.
+6. **Google GSI GMS A17** — only if the *Pixel UI* matters more than the
+   TrebleDroid app; it is the one image with no phh layer at all.
+
+All six remain **unmeasured on A155F**. Whichever is picked, only `system` is
+taken; `vendor`/`odm`/`product` stay stock (`A155FXXS7CYG4`) and G0 still pins
+the donor by size+MD5.
