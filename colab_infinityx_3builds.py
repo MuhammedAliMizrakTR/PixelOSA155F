@@ -50,14 +50,15 @@ DONOR = {
 
 ROM_NAME = os.environ.get("ROM_NAME", "InfinityX")
 KERNELS = ["bakasu", "kernelsunext", "stock"]        # stock == "vanilla" kernel
-EXCLUDE_USERDATA = os.environ.get("EXCLUDE_USERDATA", "1")   # 1 = veriyi koru
+EXCLUDE_USERDATA = os.environ.get("EXCLUDE_USERDATA", "0")   # 0 = temiz kurulum (userdata.img dahil)
 SKIP_GSI_EXTRAS = os.environ.get("SKIP_GSI_EXTRAS", "1")     # 1 = GSI'a dokunma
 VERIFY_DRIVE_HASH = os.environ.get("VERIFY_DRIVE_HASH", "1") == "1"
 GIB = 1024 ** 3
 # Gerçek boyutlardan hesap: super 9.35 GB + parçalar 11.7 GB + TAR 12.2 GB.
 # SPLIT_BYTES=0 olduğu için 7 x 1.9 GB'lık transport parçaları hiç üretilmez.
-NEED_COLAB_GIB = 45          # her build öncesi /content'te gereken boş alan
-NEED_DRIVE_GIB = 13          # her build öncesi Drive'da gereken boş alan
+NEED_COLAB_GIB = 50          # her build öncesi /content'te gereken boş alan
+NEED_DRIVE_GIB = 14          # her build öncesi Drive'da gereken boş alan
+FORCE_REBUILD = os.environ.get("FORCE_REBUILD") == "1"   # Drive'da AP varsa yine de kur
 LOCAL_TEST = os.environ.get("LOCAL_TEST") == "1"
 # Test/inspection hooks. Üretimde boş kalır: donor GitHub'dan iner, pinler
 # repodaki inputs/inputs.lock.json'dan okunur.
@@ -175,7 +176,7 @@ def preflight():
     log("curl / git / tar / xz: var")
     drive_free = free_gib(DRIVE)
     # AP başına ~10.8 GiB (EXCLUDE_USERDATA=1 userdata.img'yi çıkarır) + donor
-    need = DONOR["size"] / GIB + 3 * 11.5
+    need = DONOR["size"] / GIB + 3 * 12.8
     if drive_free >= 0:
         log(f"Drive boş alan: {drive_free:.1f} GiB | 3 AP için gereken ~{need:.1f} GiB")
         if drive_free < need:
@@ -330,6 +331,24 @@ def write_lock(kernel, drive_path, donor_md5, build_tag):
     return path
 
 
+def already_built(kernel):
+    """Drive'da aynı kernel için audit'i temiz bir AP var mı? (devam edebilmek için)"""
+    import glob
+    pattern = os.path.join(DRIVE, "out", f"AP_SM-A155F_{ROM_NAME}-{DONOR['tag']}_{kernel}_*.tar")
+    for tar in sorted(glob.glob(pattern)):
+        audit = tar[:-4] + ".audit.txt"
+        if not os.path.isfile(audit):
+            continue
+        try:
+            with open(audit, encoding="utf-8", errors="replace") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        if "VERDICT: clean" in text and os.path.getsize(tar) > (64 << 20):
+            return tar
+    return None
+
+
 def build_one(kernel, donor_path, donor_md5, build_tag):
     log(f"\n{'=' * 70}\n=== 5/7 BUILD: kernel={kernel}  ({ROM_NAME}, A17)\n{'=' * 70}")
 
@@ -442,8 +461,11 @@ def write_summary(build_tag, head, results):
     md.append(f"- donor: `{DONOR['name']}`")
     md.append(f"- donor sha256 (GitHub): `{DONOR['sha256']}`")
     md.append(f"- paketleme: `EXCLUDE_USERDATA={EXCLUDE_USERDATA}` "
-              f"(1 = kullanıcı verisi korunur), `SKIP_GSI_EXTRAS={SKIP_GSI_EXTRAS}` "
-              f"(1 = GSI'a hiç dokunulmaz)")
+              f"(0 = TEMİZ KURULUM, userdata.img dahil; 1 = veri korunur), "
+              f"`SKIP_GSI_EXTRAS={SKIP_GSI_EXTRAS}` (1 = GSI'a hiç dokunulmaz)")
+    md.append("- ROM değişiminde veri korumak önerilmez: eski ROM'un /data şifreleme "
+              "anahtarları ve metadata'sı yeni system ile uyuşmaz, rastgele crash / "
+              "'data corrupt' riski doğar. Bu yüzden varsayılan temiz kurulum.")
     md.append("")
     md.append("| kernel | durum | AP | boyut (B) | sha256 | süre |")
     md.append("|---|---|---|---|---|---|")
@@ -451,6 +473,9 @@ def write_summary(build_tag, head, results):
         if r.get("status") == "ok":
             md.append(f"| {r['kernel']} | OK | `{r['ap_name']}` | {r['size']} | "
                       f"`{r['sha256']}` | {r['minutes']} dk |")
+        elif r.get("status") == "skipped":
+            md.append(f"| {r['kernel']} | ZATEN VAR (atlandı) | `{r['ap_name']}` | "
+                      f"{r['size']} | önceki çalıştırma | — |")
         else:
             md.append(f"| {r.get('kernel')} | HATA | — | — | — | — |")
     if FAILURES:
@@ -496,6 +521,15 @@ def main():
     results = []
     for kernel in KERNELS:
         try:
+            done = None if FORCE_REBUILD else already_built(kernel)
+            if done:
+                log(f"\n=== {kernel}: Drive'da zaten var, atlandı -> {done}")
+                results.append({"kernel": kernel, "status": "skipped",
+                                "ap_name": os.path.basename(done),
+                                "drive_path": done,
+                                "size": os.path.getsize(done),
+                                "sha256": "(önceki çalıştırmada doğrulandı)"})
+                continue
             results.append(build_one(kernel, donor_drive_path, donor_md5, build_tag))
         except Exception as exc:                       # noqa: BLE001 - tek build düşsün, hepsi değil
             log(f"!! {kernel} build HATASI: {exc}")
@@ -504,7 +538,7 @@ def main():
             results.append({"kernel": kernel, "status": "failed"})
 
     write_summary(build_tag, head, results)
-    ok = sum(1 for r in results if r.get("status") == "ok")
+    ok = sum(1 for r in results if r.get("status") in ("ok", "skipped"))
     log(f"\nBİTTİ: {ok}/{len(KERNELS)} build tamam. Drive: {DRIVE}")
     if ok < len(KERNELS):
         log("Eksik kalanlar için log dosyasına bak: " + str(LOG_PATH))

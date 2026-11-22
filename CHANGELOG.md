@@ -4,6 +4,21 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — phone-only run: clean install by default, resumable cell
+
+* `EXCLUDE_USERDATA` default in the cell flips to **0** (clean install). Keeping
+  `/data` across a ROM swap is the usual cause of a "data corrupt" boot and random
+  crashes: the old ROM's file-based-encryption keys and `/metadata` do not match
+  the new system image. The summary now says so instead of recommending it.
+* Re-running the cell is idempotent: a kernel whose AP **and** its clean
+  `.audit.txt` already exist in `out/` is skipped (`FORCE_REBUILD=1` to redo), and
+  the donor is taken from the Drive copy instead of being re-downloaded. This is
+  what makes an overnight, unattended run survive a Colab disconnect.
+* Validated in `LOCAL_TEST=1`: first run 3/3 `VERDICT: clean`; second run skips
+  all three and still writes a complete summary; `FORCE_REBUILD=1` rebuilds 3/3.
+
+---
+
 ## 2026-11-22 — Infinity X one-paste cell, 3 kernels, SPLIT_BYTES=0
 
 * `colab_infinityx_3builds.py`: single Colab cell for the A17 TrebleDroid donor.

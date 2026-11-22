@@ -74,6 +74,19 @@ it in `PixelOSA155F/` on Drive, writes one G0 pin file per kernel, builds
 (no transport parts — `SPLIT_BYTES=0`), re-hashes the Drive copy, and writes
 `SUMMARY-infinityx-<UTC>.md`. A failed build is isolated: the others continue.
 
+Phone-only operation (PC off) is the design case:
+
+* the cell runs on Google's VM, so a sleeping phone / closed tab does not stop it
+  (free Colab caps a session at ~12 h; this job is ~2-3 h);
+* the log is appended to Drive line by line, so progress is watchable from the
+  Drive app;
+* **re-running the cell is cheap and safe**: a kernel whose AP + clean `.audit.txt`
+  already sit in `out/` is skipped (`FORCE_REBUILD=1` overrides), and the donor
+  image is re-used from Drive instead of being downloaded again;
+* default is `EXCLUDE_USERDATA=0` (clean install). Keeping `/data` across a ROM
+  change is what produces "data corrupt" / random crashes: the old ROM's FBE
+  keys and `/metadata` do not match the new system.
+
 ## Re-running one stage
 
 ```bash
