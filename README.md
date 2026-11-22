@@ -155,7 +155,8 @@ from the owner — see `docs/GATES.md`.
 rom/      numbered build stages (tools, gsi-inputs, extract-ap, repack-super,
           make-vbmeta, pack-ap, gsi-build) + simfix/ + this line's README
 tools/    gsi_inspect, super_inspect, odin_audit, odin_pack, tar_inspect,
-          verify_inputs, pin_gate, gsi_tag, make_single_file, mk_synthetic_inputs
+          verify_inputs, pin_gate, gsi_tag, make_single_file, mk_synthetic_inputs,
+          device_state.sh (read-only adb baseline collector)
 tests/    39 synthetic tests
 docs/     GATES.md (gate status + decisions), EVIDENCE.md (measured facts),
           ROM_BUILD.md (stage reference), 20-FIRST-BUILD.md (runbook)

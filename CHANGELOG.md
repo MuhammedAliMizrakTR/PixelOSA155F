@@ -4,6 +4,20 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — device baseline: stock boots again
+
+* After a full stock restore (BL + stock AP + CP + CSC from the pinned package)
+  the phone booted and enumerated over USB — evidence that the partitions and the
+  hardware are healthy; the previous NothingOS run failed with stock
+  `vendor`/`odm`/`product` in place, so the GSI/vendor version gap stays the
+  leading explanation.
+* Added `tools/device_state.sh`: read-only adb collector (what booted, bootloader
+  unlock state, adb/developer flags, kernel, storage, block devices, last boot
+  reason). It prints a verdict line for the one thing that decides whether a
+  custom AP may boot at all — `ro.boot.verifiedbootstate` (orange = unlocked).
+* Reminder recorded for the next attempt: enable USB debugging **before** flashing
+  a data-wiping AP, otherwise a boot that never shows a UI has no adb either.
+
 ## 2026-11-22 — artifact archived + "keep my data" switch
 
 ### Result
