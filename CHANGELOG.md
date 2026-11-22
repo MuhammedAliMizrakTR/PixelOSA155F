@@ -9,7 +9,7 @@ deleted, overwritten or renamed by a build.
 ### Result
 
 * The 12,222,085,120 B AP was copied to Drive
-  (`PixelOSA155F/out/…tar`, 60.99 GiB free, ~92 s at ~120-180 MiB/s) and
+  (`PixelOSA155F/out/…tar`, 60.99 GiB free, ~120-180 MiB/s) and
   re-hashed **from the Drive mount**: sha256 `f0cc78c9…3662` → match. Google's own
   MD5 for the object: `246716fc6e2a4b3b3d3bfc316d2b99dd`. The audit report was
   re-read from Drive: `VERDICT: clean`, 1,944 B.

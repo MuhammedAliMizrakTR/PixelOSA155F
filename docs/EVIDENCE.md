@@ -104,8 +104,8 @@ The rebuilt system is 464 MB larger than stock. It still fits inside the stock
 | MD5 (computed by Google Drive itself) | `246716fc6e2a4b3b3d3bfc316d2b99dd` — a second, independent fingerprint |
 | Audit copy | `.audit.txt`, 1,944 B, re-read from Drive: `VERDICT: clean` |
 
-Copy took ~92 s at ~120-180 MiB/s; Drive had 60.99 GiB free, so the 12.2 GB TAR
-fits without splitting. If Drive ever runs short, the rescue cell splits it into
+The copy ran at ~120-180 MiB/s (the run's own progress lines) and Drive had
+60.99 GiB free, so the 12.2 GB TAR fit without splitting. If Drive ever runs short, the rescue cell splits it into
 1,900 MB transport parts instead and prints per-part download lines.
 
 ### Three things this run proved that matter for flashing
