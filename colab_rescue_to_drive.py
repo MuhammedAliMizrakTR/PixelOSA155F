@@ -38,7 +38,8 @@ def sha256_with_progress(path, label="sha256"):
             done += len(block)
             if done - last >= (2 << 30) or done == total:
                 last = done
-                pct = 100 * done / total
+                pct = 100.0 * done / total if total else 100.0
+                pct = min(100.0, max(0.0, pct))
                 print(f"  {label}: {pct:5.1f}%  {human(done)}  "
                       f"({int(time.time() - t0)} s)", flush=True)
     return h.hexdigest()
@@ -98,9 +99,11 @@ def copy_with_progress(src, dst):
             done += len(block)
             if done - last >= (1 << 30) or done == total:
                 last = done
-                rate = done / max(1e-9, time.time() - t0)
-                eta = (total - done) / max(1e-9, rate)
-                print(f"  kopya: {100 * done / total:5.1f}%  {human(done)}  "
+                elapsed = max(1e-9, time.time() - t0)
+                rate = done / elapsed
+                eta = max(0.0, (total - done) / max(1e-9, rate))
+                pct = min(100.0, max(0.0, 100.0 * done / total))
+                print(f"  kopya: {pct:5.1f}%  {human(done)}  "
                       f"{rate / 2**20:.1f} MiB/s  kalan ~{int(eta // 60)} dk", flush=True)
 
 if free >= size * 1.05 or FORCE_COPY:

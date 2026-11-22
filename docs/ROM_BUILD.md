@@ -54,6 +54,7 @@ failure (`set -euo pipefail`). Every stage is also runnable on its own against
 | `ROM_NAME` | `PixelOS` | AP file-name prefix |
 | `GSI_ZIP` | auto (`*-MysticGSI.zip*`) | explicit donor |
 | `SKIP_GSI_EXTRAS` | `1` | `0` embeds the RIL-fix module into the image |
+| `EXCLUDE_USERDATA` | `0` | `1` leaves the stock `userdata.img` out of the AP (keeps the phone's data) |
 | `KERNEL_SHA` | unset | extra SHA-256 check for the kernel tar (G0 already pins MD5) |
 
 ## Re-running one stage

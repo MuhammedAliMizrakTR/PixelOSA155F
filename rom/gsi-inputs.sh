@@ -191,6 +191,7 @@ DF
   echo "KERNEL_VARIANT=$KERNEL_VARIANT"
   echo "FW_VERSION=$FW_VERSION"
   echo "ROM_NAME=${ROM_NAME:-PixelOS}"
+  echo "EXCLUDE_USERDATA=${EXCLUDE_USERDATA:-0}"
 } > work/build.env
 say "build parameters -> work/build.env"
 cat work/build.env

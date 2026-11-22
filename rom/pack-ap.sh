@@ -25,6 +25,9 @@ fi
 export KERNEL_VARIANT="${KERNEL_VARIANT:-bakasu}"
 export FW_VERSION="${FW_VERSION:-A155FXXS7CYG4}"
 export ROM_NAME="${ROM_NAME:-PixelOS}"
+# EXCLUDE_USERDATA=1 drops the stock userdata.img member so flashing does not
+# overwrite user data. Default 0: the stock member is preserved (clean install).
+export EXCLUDE_USERDATA="${EXCLUDE_USERDATA:-0}"
 
 command -v lz4 >/dev/null || { echo "FATAL: lz4 not found in PATH and tools/lz4/lz4 is missing - run: bash rom/tools.sh"; exit 1; }
 mkdir -p work/stage out/dist
@@ -37,6 +40,16 @@ OUT_MEMBERS=work/ap/packed-members.txt
 
 while IFS= read -r m; do
   [ -n "$m" ] || continue
+  # "keep my data" build: the stock userdata.img is simply left out; every other
+  # member (super/vbmeta/boot) still gets written, so the package stays valid.
+  if [ "$EXCLUDE_USERDATA" = "1" ]; then
+    case "$(basename "$m")" in
+      userdata.img|userdata.img.lz4)
+        echo "userdata.img SKIPPED (EXCLUDE_USERDATA=1) -> user data is not overwritten"
+        continue
+        ;;
+    esac
+  fi
   case "$m" in
     boot.img.lz4|boot.img)
       cp work/kernel/boot.img "$STAGE/boot.img"

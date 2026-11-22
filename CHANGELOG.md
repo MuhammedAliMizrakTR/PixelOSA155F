@@ -4,6 +4,33 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — artifact archived + "keep my data" switch
+
+### Result
+
+* The 12,222,085,120 B AP was copied to Drive
+  (`PixelOSA155F/out/…tar`, 60.99 GiB free, ~92 s at ~120-180 MiB/s) and
+  re-hashed **from the Drive mount**: sha256 `f0cc78c9…3662` → match. Google's own
+  MD5 for the object: `246716fc6e2a4b3b3d3bfc316d2b99dd`. The audit report was
+  re-read from Drive: `VERDICT: clean`, 1,944 B.
+
+### Added
+
+* `EXCLUDE_USERDATA=1` (read by `rom/gsi-build.sh` and `rom/pack-ap.sh`, recorded
+  in `work/build.env`): leaves the stock `userdata.img` out of the AP so flashing
+  does not overwrite user data. Default `0` = stock member preserved.
+  Verified both ways on a members-list fixture: default AP carries
+  `userdata.img`, flagged AP does not, `odin_audit` clean in both cases.
+* `colab_rescue_to_drive.py`: post-build cell (verify sha256 → archive audit +
+  manifest to Drive → copy the TAR when Drive has room, else split into 1,900 MB
+  transport parts with per-part download lines). Uploaded to the Drive folder.
+
+### Fixed
+
+* Progress lines in the Colab cells could print a garbled percentage when the
+  wall-clock delta was tiny; the percentage/ETA are now clamped to 0..100 and the
+  division is guarded.
+
 ## 2026-11-22 — first real PixelOS AP (owner's Colab)
 
 ### Result

@@ -83,8 +83,9 @@ it exists.
    has evidence.
 2. **userdata.** The real artifact contains the stock `userdata.img`
    (1,418,011,288 B sparse / 17,179,869,184 B expanded), so flashing it wipes
-   user data. Keep it (clean install) or drop it from the AP (keep data)? The
-   pipeline currently preserves the stock member; excluding it is a one-line
-   change in `rom/pack-ap.sh` if the owner chooses "keep data".
+   user data. Both shapes are now one flag apart: default keeps the stock member
+   (clean install), `EXCLUDE_USERDATA=1` drops it (keep data). The flag was
+   tested: the flagged AP has no `userdata.img` and still audits `clean`. Which
+   one is published is the owner's call.
 3. **Repository target.** This branch (`arena/802af16c-pixelosa155f`) is the
    working branch; confirm `PixelOSA155F` `main` is where it should land.

@@ -14,6 +14,9 @@ export KERNEL_VARIANT="${KERNEL_VARIANT:-bakasu}"
 export FW_VERSION="${FW_VERSION:-A155FXXS7CYG4}"
 export ROM_NAME="${ROM_NAME:-PixelOS}"
 SKIP_GSI_EXTRAS="${SKIP_GSI_EXTRAS:-1}"
+# 1 = leave the stock userdata.img out of the AP (keep the phone's data)
+EXCLUDE_USERDATA="${EXCLUDE_USERDATA:-0}"
+export EXCLUDE_USERDATA
 
 say() { printf '\n########## %s\n' "$*"; }
 t0=$(date +%s)

@@ -93,12 +93,28 @@ odm               1,650,688        1,650,688   unchanged
 The rebuilt system is 464 MB larger than stock. It still fits inside the stock
 `main` group, so no partition geometry beyond `system` changed.
 
+### Where the artifact lives, and how it was verified twice
+
+| | |
+|---|---|
+| Drive | `PixelOSA155F/out/AP_SM-A155F_PixelOS-cheetah-A17_bakasu_A155FXXS7CYG4.tar` (file id `1CGzMSnBOnIfj3xTVpR1uwxz0pndE4aJT`) |
+| Size | 12,222,085,120 B (matches the local file byte for byte) |
+| sha256 (local) | `f0cc78c9ae26a4066ffd0bd0888e1d2be63673ca44828d658beeaedaedbe3662` |
+| sha256 (re-read from the Drive mount) | `f0cc78c9ae26a4066ffd0bd0888e1d2be63673ca44828d658beeaedaedbe3662` → **match** |
+| MD5 (computed by Google Drive itself) | `246716fc6e2a4b3b3d3bfc316d2b99dd` — a second, independent fingerprint |
+| Audit copy | `.audit.txt`, 1,944 B, re-read from Drive: `VERDICT: clean` |
+
+Copy took ~92 s at ~120-180 MiB/s; Drive had 60.99 GiB free, so the 12.2 GB TAR
+fits without splitting. If Drive ever runs short, the rescue cell splits it into
+1,900 MB transport parts instead and prints per-part download lines.
+
 ### Three things this run proved that matter for flashing
 
 1. **`userdata.img` is in the package** — stock member, 1,418,011,288 B sparse
    (17,179,869,184 B = 16 GiB expanded). Flashing this AP as-is overwrites the
-   userdata partition: **data loss**. If the data should survive, `userdata.img`
-   must be left out of the AP (and the super/vbmeta members kept).
+   userdata partition: **data loss**. `EXCLUDE_USERDATA=1` now drops that member
+   (verified: default AP carries `userdata.img`, flagged AP does not, audit still
+   `clean`, super untouched).
 2. **The artifact is ~3.9 GB larger than the stock AP** (12.22 GB vs 8.34 GB)
    because `super.img` is raw sparse (9.43 GB) instead of LZ4 (5.87 GB) and
    `userdata.img`/`recovery.img` are decompressed. That is the cost of the
