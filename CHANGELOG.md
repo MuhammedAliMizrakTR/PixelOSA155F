@@ -4,6 +4,25 @@ All notable changes to the PixelOSA155F build line. English, newest first.
 Dates are UTC. This project only ever *adds* — an existing artifact is never
 deleted, overwritten or renamed by a build.
 
+## 2026-11-22 — retry on Drive I/O, `KERNELS=` selector, stock build resume
+
+* The unattended run finished `bakasu` and `kernelsunext` (both `VERDICT: clean`,
+  both uploaded and re-hashed), then the Colab worker died during the third
+  build. Cause unproven — the log ends with the session, not with an error.
+* `retry()` now wraps every Drive-side operation (donor copy, AP copy,
+  re-hash): 3 attempts, 15 s apart, then the last real error. A transient FUSE
+  hiccup no longer kills an overnight run.
+* `KERNELS=` selects which kernels to build (`KERNELS=stock` builds only the
+  vanilla one). Combined with the existing "skip what is already on Drive", the
+  resume run is one line and cannot redo finished work.
+* Verified remotely after the crash (Drive's own content hashes, not our files):
+  `bakasu` AP sha256 `61a655e6…c78c`, `kernelsunext` AP sha256 `e5878c74…103d` —
+  both equal to the value in their `.audit.txt`; donor sha256 `85eb62ed…c6ef`
+  equals GitHub's asset digest; firmware md5 `bea1131d…9b57` and the three kernel
+  tar md5s equal the repo pins. No corruption found.
+
+---
+
 ## 2026-11-22 — mount really fixed this time: cleanup + fallback mountpoint
 
 The previous patch only reordered `main()`; `mount_drive()` itself was never

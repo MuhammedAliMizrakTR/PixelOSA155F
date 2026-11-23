@@ -83,6 +83,10 @@ Phone-only operation (PC off) is the design case:
 * **re-running the cell is cheap and safe**: a kernel whose AP + clean `.audit.txt`
   already sit in `out/` is skipped (`FORCE_REBUILD=1` overrides), and the donor
   image is re-used from Drive instead of being downloaded again;
+* `KERNELS=stock` (any comma list) builds only those kernels — used to finish a
+  run whose last build died;
+* every Drive copy/re-hash is retried 3x (15 s apart) before it is treated as a
+  failure;
 * default is `EXCLUDE_USERDATA=0` (clean install). Keeping `/data` across a ROM
   change is what produces "data corrupt" / random crashes: the old ROM's FBE
   keys and `/metadata` do not match the new system.

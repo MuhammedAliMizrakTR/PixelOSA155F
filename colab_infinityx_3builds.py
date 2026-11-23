@@ -53,7 +53,9 @@ DONOR = {
 }
 
 ROM_NAME = os.environ.get("ROM_NAME", "InfinityX")
-KERNELS = ["bakasu", "kernelsunext", "stock"]        # stock == "vanilla" kernel
+KERNELS = [k.strip() for k in
+           os.environ.get("KERNELS", "bakasu,kernelsunext,stock").split(",")
+           if k.strip()]                              # stock == "vanilla" kernel
 EXCLUDE_USERDATA = os.environ.get("EXCLUDE_USERDATA", "0")   # 0 = temiz kurulum (userdata.img dahil)
 SKIP_GSI_EXTRAS = os.environ.get("SKIP_GSI_EXTRAS", "1")     # 1 = GSI'a dokunma
 VERIFY_DRIVE_HASH = os.environ.get("VERIFY_DRIVE_HASH", "1") == "1"
@@ -153,6 +155,21 @@ def copy_with_progress(src, dst, label="kopya", chunk=8 << 20):
         os.fsync(fo.fileno())
     shutil.move(tmp, dst)
     print("", flush=True)
+
+
+def retry(fn, what, tries=3, delay=15):
+    """Drive/FUSE işlemleri için tekrar deneme; hepsini düşürürse son hatayı atar."""
+    last = None
+    for attempt in range(1, tries + 1):
+        try:
+            return fn()
+        except Exception as exc:                    # noqa: BLE001
+            last = exc
+            log(f"  {what}: {attempt}/{tries} düştü ({exc})")
+            if attempt < tries:
+                log(f"  {delay}s sonra tekrar denenecek")
+                time.sleep(delay)
+    raise last
 
 
 def free_gib(path):
@@ -309,10 +326,11 @@ def stage_donor_to_drive(local):
         raise RuntimeError(f"Drive'da yer yok: {free_gib(DRIVE):.1f} GiB "
                            f"(gerekli {(DONOR['size'] / GIB) + 1:.1f} GiB)")
     dst = unique(dst)
-    copy_with_progress(local, dst, label="donor -> Drive")
+    retry(lambda: copy_with_progress(local, dst, label="donor -> Drive"),
+          "donor -> Drive")
     if os.path.getsize(dst) != DONOR["size"]:
         raise RuntimeError("Drive kopyasının boyutu tutmuyor")
-    md5 = hash_file(dst, "md5", label="md5(drive)")
+    md5 = retry(lambda: hash_file(dst, "md5", label="md5(drive)"), "md5(drive)")
     if hash_file(local, "md5") != md5:
         raise RuntimeError("Drive kopyası kaynakla aynı değil (copy bozuk)")
     log(f"Drive kopyası doğrulandı: md5={md5}")
@@ -497,13 +515,15 @@ def build_one(kernel, donor_path, donor_md5, build_tag):
     # ---- Drive'a bırak (append-only: aynı isim varsa -UTC eklenir)
     dst_tar = unique(os.path.join(DRIVE, "out", tars[0]))
     log(f"Drive'a kopyalanıyor -> {dst_tar}  (boş: {free_gib(DRIVE):.1f} GiB)")
-    copy_with_progress(local_tar, dst_tar, label="AP -> Drive")
+    retry(lambda: copy_with_progress(local_tar, dst_tar, label="AP -> Drive"),
+          "AP -> Drive")
     if os.path.getsize(dst_tar) != size:
         raise RuntimeError("Drive kopyasının boyutu tutmuyor")
 
     drive_sha = None
     if VERIFY_DRIVE_HASH:
-        drive_sha = hash_file(dst_tar, "sha256", label="sha256(Drive kopya)")
+        drive_sha = retry(lambda: hash_file(dst_tar, "sha256", label="sha256(Drive kopya)"),
+                          "sha256(Drive kopya)")
         if drive_sha != sha:
             raise RuntimeError(f"Drive kopyası bozuk: {drive_sha} != {sha}")
 
