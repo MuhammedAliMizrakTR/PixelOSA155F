@@ -1,0 +1,32 @@
+{
+  "schema": "pixelosa155f.inputs/1",
+  "note": "Pin EVERY input by exact size + MD5 before the build reads it (gate G0). Fill from the real files: size = stat -c%s, md5 = md5sum. A missing or mismatched pin must abort the build, never warn.",
+  "inputs": [
+    {
+      "role": "donor-gsi-primary",
+      "name": "REPLACE-ME-Pixel-raven-17-...-MysticGSI.zip",
+      "source": "https://sourceforge.net/projects/mystic-gsi-updates/files/Generic/",
+      "drive_folder": "PixelOSA155F",
+      "size": null,
+      "md5": null,
+      "md5_source": "sourceforge-rss + uploaded-file (cross-check both)",
+      "use": "arm64 AB PixelOS-family GSI; becomes the 'system' partition"
+    },
+    {
+      "role": "kernel-boot",
+      "name": "bakasu_35262_susfs_v2.4.0_A155FXXS7CYG4_A15_GKI.tar",
+      "drive_folder": "PixelOSA155F",
+      "size": 67112960,
+      "md5": null,
+      "use": "boot.img only; same file the owner already flashed on this device"
+    },
+    {
+      "role": "stock-firmware",
+      "name": "SAMFW.COM_SM-A155F_XSG_A155FXXS7CYG4_fac.zip",
+      "drive_folder": "PixelOSA155F",
+      "size": 6904157493,
+      "md5": "bea1131d...9b57",
+      "use": "vendor/odm/product bytes + AP member order; needed for rollback"
+    }
+  ]
+}

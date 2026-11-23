@@ -1,0 +1,241 @@
+# Which GSI to put in `system` — and why the phone looked "cursed"
+
+Status: research document. It answers the owner's two questions after the first
+successful boot (2026-11-22):
+
+1. *"The system says CinnamonBun but the easter egg is Android 16, and there is
+   no PHH TrebleDroid app at all — what did I actually flash?"*
+2. *"Then find me a proper Google Pixel OS / proper Android 17 GSI."*
+
+No claim in here is a bootability claim for SM-A155F. Only the build that is
+already on the phone has boot evidence (the owner's own report). Everything
+else is *unmeasured* on this device.
+
+---
+
+## 1. What is actually on the phone
+
+The flashed donor zip is a **Mystic GSI port of a Google Pixel 7 Pro (cheetah)
+factory image**, not a Google GSI release and not a TrebleDroid/PHH build.
+Upstream identifiers, as published by the porter:
+
+| Field | Value |
+|---|---|
+| Zip | `Pixel-cheetah-CinnamonBun-14911996-AB-20260227-MysticGSI.zip` (~3.1 GB) |
+| Build fingerprint | `google/cheetah_beta/cheetah:CinnamonBun/CP21.260206.011.A1/14911996:user/release-keys` |
+| Build id | `CP21.260206.011.A1` |
+| Release codename | `CinnamonBun` (the Android 17 codename) |
+| `ro.build.version.sdk` | **36** |
+| Security patch | 2025-12-05 |
+| Raw `system` size | 5.80 GiB |
+
+Two consequences, both expected and neither a defect of our packaging:
+
+* **"CinnamonBun" with an Android 16 easter egg.** `CP21.*` is Google's *Android
+  17 Beta 2* build id, and Beta 2 still advertises **SDK 36** — the SDK number
+  ("36" = the Android 16 API level) is what the framework, the Easter egg asset
+  and most apps key off. So the release *codename* reads CinnamonBun while the
+  *platform level* is 36. That is exactly the state a beta is in; `CinnamonBun`
+  only becomes SDK 37 in later builds. The leak of that mismatch into the UI is
+  the porter's repack, not something `rom/` did.
+* **No PHH TrebleDroid app.** The TrebleDroid settings app
+  (`me.phh.treble.app`) ships only in builds made from **phhusson's /
+  TrebleDroid's device trees** — i.e. AOSP + phh patches. A ported Pixel factory
+  dump is a different lineage: it has no treble app, no `phh` props, and no
+  TrebleDroid hook points. Its absence says nothing about the flash.
+
+Verify on the device (read-only):
+
+```bash
+adb shell getprop ro.build.fingerprint
+adb shell getprop ro.build.version.sdk          # expect 36
+adb shell getprop ro.build.version.codename     # expect REL (beta reports REL)
+adb shell getprop ro.build.id                   # expect CP21.260206.011.A1
+adb shell pm list packages | grep -i phh        # empty == no TrebleDroid build
+bash tools/device_state.sh                      # our own baseline collector
+```
+
+---
+
+## 2. What "proper" means — three different things
+
+| Lineage | Who makes it | What you get | Builds the TrebleDroid app? |
+|---|---|---|---|
+| **Google GSI** (`gsi_gms_arm64-*` / `aosp_arm64-*`) | Google, per-quarter, on `dl.google.com` | The reference GSI; the `_gms_` variant is a stock-Pixel-like image with GMS | No |
+| **PixelOS GSI** | mytja, Doze-off | PixelOS (Pixel launcher/fonts/features) rebuilt for Treble | No (Doze-off builds carry phh patches, the mytja tree is PixelOS) |
+| **AOSP + phh patches** | phhusson → TrebleDroid; ponces; Doze-off, cawilliamson | AOSP with the compatibility shims **and** `me.phh.treble.app` | **Yes** — this is the only lineage that ships it |
+| *Porter repacks* | Mystic, Erfan, Nippon-style | Somebody's phone factory image re-cut as a GSI | No, and OEM leftovers included |
+
+So: "PixelOS" ≠ "has the TrebleDroid app", and "has a Pixel fingerprint" ≠
+"Google GSI". The three are independent.
+
+---
+
+## 3. Candidates, ranked for SM-A155F (stock A15 vendor, GKI 5.10.226)
+
+All links are from the TrebleDroid GSI list (wiki last edited 2026-11-21).
+
+### Android 17
+
+| Image | Build | Updated | Level | Notes |
+|---|---|---|---|---|
+| **Google GSI (GMS), QPR3 Beta** | `gsi_gms_arm64-exp-DP11.260918.006-16451184` | 2026-09-02 | A17 beta | Closest thing to a *stock Pixel* GSI; `_gms_` = GMS included (`aosp_arm64-exp-DP11.260918.006` = no GMS). Beta = expect rough edges |
+| Google GSI (GMS), QPR1 | `gsi_gms_arm64-exp-CP3A.260905.010` | 2026-09-17 | A17 | More conservative than the DP |
+| **BestGSI** | `17QPR0` (`amintum/BestGSI`) | 2026-11-21 | A17 | Freshest, Oct 2026 security |
+| **Infinity X** | `2026-11-20` (`Doze-off/ProjectInfinity-X_gsi`) | 2026-11-20 | A17 | Nov 2026 security; Doze-off = phh patches |
+| RestlessOS QPR0 | `cawilliamson/treble_restlessos` | 2026-11-02 | A17 | Mirror `build.chrisaw.io` |
+| LineageOS 24.0 (unofficial) | `lineage-24.0-20261107-UNOFFICIAL-gsi_arm64` (AndyYan, SourceForge `andyyan-gsi`) | 2026-11-07 | A17 | Plain Lineage |
+| LineageOS 24.0 / Veliqen OS (Aizner) | `eyzner/LineageOS-GSI`, `eyzner/VELIQEN-OS` | 2026-11-04 / 17 | A17 | Mirrors are Yandex — slow from TR |
+
+### Android 16 (the *safe* rung: matches the vendor's own level)
+
+| Image | Build | Updated | Notes |
+|---|---|---|---|
+| **Google GSI, QPR3** | `gsi_gms_arm64-exp-CP11.251209.007.A1` / `aosp_…` | 2026-01-14 | Stable-quarter Google image, SDK 36 like the current donor but a *finished* build |
+| **PixelOS by mytja** | `mytja/treble_pixelos` tag `20250806` | 2026-08-06 | Real PixelOS for Treble, ARM64 |
+| **PixelOS (Doze-off)** | `Doze-off/PixelOS_GSI_treble` | 2026-05-02 | PixelOS + phh patch layer |
+| **ponces AOSP** | `ponces/treble_aosp` tag `v2025.06.25` | 2026-06-26 | AOSP+phh: **this one has the TrebleDroid app** |
+| TrebleDroid AOSP | `TrebleDroid/treble_experimentations` `ci-20250617` | 2025-06-17 | Upstream reference build |
+| MindOS / BestGSI 20261024 / Infinity X 20260920 / DerpFest / AxionOS / crDroid / Evolution X / Lunaris / WitAqua / MistOS | see wiki | 2026 | Alternatives if the above misbehave |
+
+### What is *not* available
+There is **no PixelOS A17 GSI** (neither mytja nor Doze-off) as of 2026-11-22,
+and no PHH-lineage A17 from phhusson himself (his tree is archived; ponces and
+Doze-off carry it). An "Android 17 PixelOS" on Telegram is a repack until it is
+listed with sources.
+
+---
+
+## 4. Compatibility rules that actually decide success
+
+From the same wiki, plus what we already measured on this device:
+
+1. **GSI API ≥ the device's shipped API.** A155F shipped Android 15 (API 35);
+   every A16/A17 image above satisfies it. Going *up* is allowed, going down is not.
+2. **System-as-root / dynamic partitions, arm64.** SM-A155F takes `arm64_bvN`
+   (A/B, GApps variant); our pipeline only consumes `system` and rebuilds the
+   rest from stock, so `bvN` naming is fine.
+3. **VNDKLite only if the device says so.** Check the "Required Image" line in
+   Treble Info; do not guess. Nothing in our build assumes VNDKLite.
+4. **Samsung AVB.** Already handled: `rom/make-vbmeta.sh` writes the 256-byte
+   `vbmeta.img` with `--flags 3` (disable verification + verity). No BL unlock
+   beyond what the owner already did, no attestation bypass.
+5. **Donor hygiene.** Prefer a release with a source tree and a build id that
+   matches the upstream project; prefer a *finished* quarter over a beta when
+   the previous attempt left confusion.
+
+---
+
+## 5. Building with a different donor (no code changes needed)
+
+`rom/gsi-inputs.sh` accepts any donor now:
+
+* auto-detect falls back from `*-MysticGSI.zip*` to any zip that really contains a
+  `system.img*` member (name guesses are never trusted), and then to a bare
+  `*.img.xz` / `*.img.gz` / `*.img` donor — the layout Infinity X, BestGSI,
+  Aizner and AndyYan actually publish. `boot*`, `vbmeta*`, `recovery*`, `super*`,
+  `dtbo*`, `userdata*` files in the same folder are never picked;
+* `system.img.gz` / `.xz` / `.lz4` members, and single-file `.img.xz` / `.img.gz`
+  donors, are decompressed/decoded once automatically;
+* level/TAG can be stated explicitly when the file name carries no codename.
+
+Colab cell (one paste, then edit these three lines at the top):
+
+```python
+ROM_NAME = "InfinityX"      # appears in the AP name
+# and in the cell's os.environ before the build:
+import os
+os.environ["GSI_ZIP"]  = "/content/drive/MyDrive/PixelOSA155F/Infinity-X-4.2-GSI_treble_arm64-ab-GAPPS-Official-20261120.img.xz"
+os.environ["GSI_TAG"]  = "infinityx-A17"   # no codename in the file name -> say it
+os.environ["GSI_LEVEL"]= "17"
+```
+
+A `.img.xz` / `.img.gz` / raw `.img` donor needs no repacking: the file *is* the
+system image. Both shapes were validated on fixtures (zip-with-gz-member and
+single-file `.img.xz`), each ending in `VERDICT: clean`; a raw `.img` run was
+also checked with `boot.img`, `vbmeta.img` and `super.img` decoys in the same
+folder — the decoys were ignored.
+
+Resulting name: `AP_SM-A155F_PixelGSI-google-A17_bakasu_<PDA>.tar` — Gate G0 still
+pins the donor by size+MD5, so a truncated Drive download stops at stage 2.
+
+Synthetic proof of this path (Google-style name + `system.img.gz`, nothing else
+changed):
+
+```
+=== GSI: gsi_gms_arm64-exp-DP11.260918.006-16451184-028aa375.zip
+system.img.gz found -> decompressing
+TAG: google-A17 (Android level: 17)
+Plain AP TAR: out/AP_SM-A155F_PixelGSI-google-A17_bakasu_A155FXXS7CYG4.tar (138690560 bytes)
+VERDICT: clean
+```
+
+---
+
+## 6. Recommendation, stated honestly
+
+* **If the goal is "this looks like a real Pixel" with the least drama:**
+  Google GSI **A16 QPR3 GMS** (`CP11.251209.007.A1`). It is a finished quarter,
+  same API level as the vendor, and it is Google's own image — the identity
+  strings then match the level, so no "CinnamonBun/16" confusion can reappear.
+* **If the goal is specifically Android 17:** Google GSI **A17 QPR1**
+  (`CP3A.260905.010`) or **BestGSI 17QPR0**; the DP3 beta is the riskiest of the
+  three because it is a developer preview.
+* **If the goal is PixelOS:** `mytja/treble_pixelos` (A16, Aug 2026) or
+  `Doze-off/PixelOS_GSI_treble` (A16, May 2026). A17 PixelOS does not exist yet.
+* **If the goal is the TrebleDroid app back:** `ponces/treble_aosp`
+  `v2025.06.25` — AOSP+phh, A16.
+
+Each of these is **one unmeasured attempt** on A155F. Keep the stock AP and the
+CSC from `SAMFW.COM_SM-A155F_XSG_A155FXXS7CYG4_fac.zip` at hand, because the
+recovery path that already worked once is the stock AP alone (no BL, no CSC).
+
+---
+
+## 7. A17 + TrebleDroid shortlist (checked 2026-11-22, upstream pages only)
+
+**Upstream fact first:** phhusson/TrebleDroid's own last release is
+`android_16.0.0_r1 ci-20250617` (A16) — there is **no upstream A17 build** from
+phhusson. Every "A17 + TrebleDroid" image is a builder who forked the
+TrebleDroid patch layer (cawilliamson's `android_device_phh_treble`, Doze-off,
+Aizner, AndyYan). Google's own A17 GSI exists, but it has no phh patches and no
+`me.phh.treble.app` by design.
+
+| # | Image | A17 build | TrebleDroid app | Google apps | Verified source |
+|---|---|---|---|---|---|
+| 1 | **Infinity X 4.2** (Doze-off) | `2026-11-20`, sec Nov 2026, "A17 QPR0" | **yes** — release notes say *"Disable Treble app → Misc → Universal legacy-kernel BPF fallback"*; README: *"This is a GSI trebledroid with patches…"* | GAPPS variant (1.62 GB `.img.xz`, sha256 `85eb62ed…`) + VANILLA (1.02 GB, sha256 `6320a85f…`), both `arm64-ab`, signed | `github.com/Doze-off/ProjectInfinity-X_gsi/releases/tag/2026-11-20` |
+| 2 | **BestGSI 17QPR0** (amintum) | 21 Nov 2026, sec Oct 2026 | **yes** — README settings path *"Settings → System → TrebleDroid Settings → Transsion Settings"* | GAppStore (GrapheneOS style, sandboxed) / Vanilla / MicroG; builds per VNDK (28…31+) | `github.com/amintum/BestGSI` (base = RestlessOS; **no source**, smali-patched repack — the author says so) |
+| 3 | **RestlessOS QPR0** (cawilliamson) | 26 Oct / 02 Nov 2026 | yes (the patch layer BestGSI inherits) | none bundled (GrapheneOS hardening, sandboxed Play) | `github.com/cawilliamson/treble_restlessos`, mirror `build.chrisaw.io` |
+| 4 | **LineageOS 24.0** (Aizner/eyzner) | `lineage-24.0-20261029` (newer 04 Nov), sec 2026-10-01 | **yes** — release notes: *"TrebleDroid Settings included"*, no bundled PHH SU | Vanilla | `github.com/eyzner/LineageOS-GSI/releases` |
+| 5 | **LineageOS 24.0** (AndyYan) | `lineage-24.0-20261107-UNOFFICIAL-gsi_arm64` | **unverified** (built off phh trees; not stated in the release) | Vanilla | SourceForge `andyyan-gsi` |
+| 6 | Google GSI GMS, A17 QPR1 | `CP3A.260905.010` / QPR3 beta `DP11.260918.006` | **no** (Google's own reference image) | **GMS included** — the actual Pixel UI | `dl.google.com/developers/android/cinnamonbun/images/gsi/` |
+| — | *Porter repacks* (Mystic, …) | e.g. `Pixel-cheetah-CinnamonBun-14911996` | no, OEM leftovers | varies | Telegram / SourceForge listings only — not on the wiki list |
+
+**VNDK is the gate that decides between them.** Infinity X documents VNDK
+`v28…v34` inside `system_ext/apex`; BestGSI ships one build per VNDK. On the
+phone:
+
+```bash
+adb shell getprop ro.vndk.version      # 34 -> Infinity X/BestGSI fine; 35+ -> prefer Lineage 24 / Google GSI
+adb shell getprop ro.product.cpu.abi   # arm64-v8a -> arm64-ab / arm64_bvN images
+```
+
+**Ranking for SM-A155F, if "A17 + TrebleDroid" is the hard requirement:**
+
+1. **Infinity X 4.2 GAPPS** — freshest (21 Nov, Nov security), explicitly
+   TrebleDroid, signed, sha256 published, and the maintainer ships device
+   patches (BPF fallback matters on MediaTek); heaviest UI, most options.
+2. **LineageOS 24.0 (Aizner)** — cleanest and smallest, TrebleDroid Settings
+   stated in the release notes, vanilla only; best "just works" odds and speed.
+3. **BestGSI** — most opinionated/modded (transparent QS, HUD widgets, duress
+   PIN); no source and it is a repack, so it is an audit trade-off.
+4. **RestlessOS** — the same base as BestGSI without the mods; hardened, no
+   Google apps.
+5. **LineageOS 24.0 (AndyYan)** — the classic, but TrebleDroid app presence is
+   not stated anywhere I could verify.
+6. **Google GSI GMS A17** — only if the *Pixel UI* matters more than the
+   TrebleDroid app; it is the one image with no phh layer at all.
+
+All six remain **unmeasured on A155F**. Whichever is picked, only `system` is
+taken; `vendor`/`odm`/`product` stay stock (`A155FXXS7CYG4`) and G0 still pins
+the donor by size+MD5.

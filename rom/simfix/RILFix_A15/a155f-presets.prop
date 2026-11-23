@@ -1,0 +1,21 @@
+# A155F GSI presets (Samsung / Helio G99 MT6789 / Mali-G57 MC2)
+# Applied by the RILFix module via `resetprop -n` (never overrides user toggles).
+# Research basis: XDA A15 GSI guides (threads 4564191, 4646402, 4688239) and
+# TrebleDroid/treble_app source (exact prop keys). All remain user-toggleable
+# in Settings -> Treble/TrebleApp.
+
+# --- Samsung hardware enablement ---
+persist.sys.phh.samsung_fingerprint=true      # fingerprint-unlock workaround
+persist.sys.phh.samsung_backlight=true        # extended brightness range
+persist.sys.phh.samsung_sensors=true          # extra sensors (auto-brightness source)
+persist.sys.phh.include_all_cameras=true      # expose aux lenses to camera apps
+persist.sys.phh.flash_strength=3              # brighter torch (1..3)
+
+# --- Display / GPU (Mali valhall) ---
+persist.sys.phh.linear_brightness=true        # linear brightness slider
+persist.sys.phh.mtk_ged_kpi=true              # MTK GED KPI — smoother rendering
+persist.sys.phh.enable_sf_gl_backpressure=0   # = "Disable SF GL backpressure" ON (prop is inverted) — MTK lag fix
+
+# --- Telephony / hardware I/O ---
+persist.sys.phh.restart_ril=true              # phh auto-restart-RIL (complements the 6h watchdog below)
+persist.sys.overlay.devinputjack=true         # 3.5 mm headset-jack detection
